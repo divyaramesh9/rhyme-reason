@@ -1,0 +1,15 @@
+# Raw downloads and generated data outputs are not tracked.
+# Reproduce with: python3 scripts/prepare_data.py --download
+data/raw/
+data/processed/
+reports/
+
+# Keep small reproducibility manifests tracked:
+#   data/manifests/sources.json  (pinned URLs + sha256 of raw files)
+#   data/manifests/pilot.json    (pilot example IDs)
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/

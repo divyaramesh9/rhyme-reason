@@ -1,0 +1,61 @@
+{
+  "name": "pilot",
+  "purpose": "Shared pilot subset for prompt development and debugging. Every experimental condition must use exactly these example_ids; the underlying splits are unchanged.",
+  "seed": 42,
+  "sample_size_per_dataset": 20,
+  "selection": "random.Random(seed).sample(sorted(example_ids), n) per dataset",
+  "pools": {
+    "gsm8k": {
+      "split": "train",
+      "pool_size": 7473,
+      "example_ids": [
+        "gsm8k-train-00204",
+        "gsm8k-train-00244",
+        "gsm8k-train-00260",
+        "gsm8k-train-00712",
+        "gsm8k-train-00767",
+        "gsm8k-train-00839",
+        "gsm8k-train-00912",
+        "gsm8k-train-01143",
+        "gsm8k-train-01828",
+        "gsm8k-train-02006",
+        "gsm8k-train-02253",
+        "gsm8k-train-03456",
+        "gsm8k-train-04467",
+        "gsm8k-train-04837",
+        "gsm8k-train-05238",
+        "gsm8k-train-05543",
+        "gsm8k-train-06033",
+        "gsm8k-train-06067",
+        "gsm8k-train-06074",
+        "gsm8k-train-07308"
+      ]
+    },
+    "logiqa_v2": {
+      "split": "validation",
+      "pool_size": 1569,
+      "example_ids": [
+        "logiqa_v2-validation-00051",
+        "logiqa_v2-validation-00061",
+        "logiqa_v2-validation-00065",
+        "logiqa_v2-validation-00178",
+        "logiqa_v2-validation-00191",
+        "logiqa_v2-validation-00209",
+        "logiqa_v2-validation-00228",
+        "logiqa_v2-validation-00285",
+        "logiqa_v2-validation-00447",
+        "logiqa_v2-validation-00457",
+        "logiqa_v2-validation-00501",
+        "logiqa_v2-validation-00563",
+        "logiqa_v2-validation-00864",
+        "logiqa_v2-validation-01116",
+        "logiqa_v2-validation-01209",
+        "logiqa_v2-validation-01309",
+        "logiqa_v2-validation-01385",
+        "logiqa_v2-validation-01508",
+        "logiqa_v2-validation-01516",
+        "logiqa_v2-validation-01518"
+      ]
+    }
+  }
+}

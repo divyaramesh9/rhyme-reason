@@ -1,0 +1,64 @@
+{
+  "description": "Pinned upstream sources and integrity checksums for raw data.",
+  "datasets": {
+    "gsm8k": {
+      "repository": "https://github.com/openai/grade-school-math",
+      "commit": "3101c7d5072418e28b9008a6636bde82a006892c",
+      "license": "MIT (see repository LICENSE)",
+      "files": [
+        {
+          "raw_split": "train",
+          "standardized_split": "train",
+          "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/train.jsonl",
+          "local_path": "data/raw/gsm8k/train.jsonl",
+          "sha256": "17f347dc51477c50d4efb83959dbb7c56297aba886e5544ee2aaed3024813465",
+          "bytes": 4166206,
+          "downloaded_at": "2026-11-09T22:38:12.821298+00:00"
+        },
+        {
+          "raw_split": "test",
+          "standardized_split": "test",
+          "url": "https://raw.githubusercontent.com/openai/grade-school-math/3101c7d5072418e28b9008a6636bde82a006892c/grade_school_math/data/test.jsonl",
+          "local_path": "data/raw/gsm8k/test.jsonl",
+          "sha256": "3730d312f6e3440559ace48831e51066acaca737f6eabec99bccb9e4b3c39d14",
+          "bytes": 749738,
+          "downloaded_at": "2026-11-09T22:38:12.821856+00:00"
+        }
+      ]
+    },
+    "logiqa_v2": {
+      "repository": "https://github.com/csitfun/LogiQA2.0",
+      "commit": "955e1d3df6c59d9bfb44d9913da1e1a27ec14e18",
+      "license": "CC BY-NC-SA 4.0 (see repository README)",
+      "files": [
+        {
+          "raw_split": "train",
+          "standardized_split": "train",
+          "url": "https://raw.githubusercontent.com/csitfun/LogiQA2.0/955e1d3df6c59d9bfb44d9913da1e1a27ec14e18/logiqa/DATA/LOGIQA/train.txt",
+          "local_path": "data/raw/logiqa_v2/train.txt",
+          "sha256": "98eb412e8ed53b3d65da5ef75b00b7a0bbdea7970c05ad699291a2a0510922de",
+          "bytes": 14045351,
+          "downloaded_at": "2026-11-09T22:38:12.828625+00:00"
+        },
+        {
+          "raw_split": "dev",
+          "standardized_split": "validation",
+          "url": "https://raw.githubusercontent.com/csitfun/LogiQA2.0/955e1d3df6c59d9bfb44d9913da1e1a27ec14e18/logiqa/DATA/LOGIQA/dev.txt",
+          "local_path": "data/raw/logiqa_v2/dev.txt",
+          "sha256": "bbefb563b7ddc02640ccdc314c1315d5727dba48539d0ecdd126fa351e511b09",
+          "bytes": 1770764,
+          "downloaded_at": "2026-11-09T22:38:12.829411+00:00"
+        },
+        {
+          "raw_split": "test",
+          "standardized_split": "test",
+          "url": "https://raw.githubusercontent.com/csitfun/LogiQA2.0/955e1d3df6c59d9bfb44d9913da1e1a27ec14e18/logiqa/DATA/LOGIQA/test.txt",
+          "local_path": "data/raw/logiqa_v2/test.txt",
+          "sha256": "71940b37ae0184b677c253a148d57ad4e75d6113447b1563c2ca82483e4e4f8d",
+          "bytes": 1740565,
+          "downloaded_at": "2026-11-09T22:38:12.830142+00:00"
+        }
+      ]
+    }
+  }
+}
