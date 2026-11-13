@@ -5,11 +5,16 @@ data/processed/
 reports/
 
 # Keep small reproducibility manifests tracked:
-#   data/manifests/sources.json  (pinned URLs + sha256 of raw files)
-#   data/manifests/pilot.json    (pilot example IDs)
+#   data/manifests/sources.json        (pinned URLs + sha256 of raw files)
+#   data/manifests/pilot.json          (pilot example IDs)
+#   data/manifests/pilot_disjoint.json (test-disjoint pilot example IDs)
+
+# Generation outputs and model-run artifacts are not tracked.
+outputs/
 
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+.venv-*/
 venv/

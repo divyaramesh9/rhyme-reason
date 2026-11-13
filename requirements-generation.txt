@@ -1,0 +1,14 @@
+# Model-generation environment (separate from requirements.txt, which covers
+# only the stdlib data-preparation pipeline and pytest).
+#
+# Apple silicon only (mlx). Install into a dedicated venv:
+#   python3 -m venv .venv-mlx
+#   .venv-mlx/bin/pip install -r requirements-generation.txt
+#
+# Resolved and pinned on macOS 26.6 (arm64), Python 3.13.5, 2026-11-11.
+mlx-lm==0.32.2
+mlx==0.32.4
+transformers==5.22.2
+huggingface-hub==2.4.0
+tokenizers==0.23.3
+numpy==2.5.4

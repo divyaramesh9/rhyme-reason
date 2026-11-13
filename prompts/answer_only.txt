@@ -1,0 +1,7 @@
+$question_block
+
+Respond with exactly one line in the format:
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec. Do not include any other text.

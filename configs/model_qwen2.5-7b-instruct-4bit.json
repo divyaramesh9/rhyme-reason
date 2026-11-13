@@ -1,0 +1,5 @@
+{
+  "repo_id": "mlx-community/Qwen2.5-7B-Instruct-4bit",
+  "revision": "c26a38f6a37d0a51b4e9a1eb3026530fa35d9fed",
+  "notes": "4-bit MLX community quantization of Qwen2.5-7B-Instruct. Revision is the immutable commit sha of repo main as resolved 2026-11-11 (last modified upstream 2024-11-06). Loaded locally via huggingface_hub.snapshot_download(repo_id, revision) + mlx_lm.load(snapshot_path)."
+}

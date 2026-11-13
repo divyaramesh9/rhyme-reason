@@ -1,0 +1,10 @@
+$question_block
+
+Think through the problem step by step in ordinary prose, then give your final answer. Respond in exactly this format:
+
+REASONING:
+<your reasoning in ordinary prose>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

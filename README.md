@@ -218,3 +218,111 @@ Citations:
   options). They are preserved verbatim; labels exist only as `options` keys.
 - The raw `.txt` files have no trailing newline, so `wc -l` undercounts by
   one; record counts come from JSON parsing.
+
+---
+
+# Part 2 — Local generation, scoring, and the development baseline pilot
+
+Runs `mlx-community/Qwen2.5-7B-Instruct-4bit` locally under two development
+conditions — `answer_only` and `prose_reasoning` — over a test-disjoint
+pilot subset, then scores the `FINAL_ANSWER:` field. No training, cloud, or
+paid APIs. Development runs only; not final experimental results.
+
+## Test-disjoint pilot (`data/manifests/pilot_disjoint.json`)
+
+Part 1 reported exact-duplicate content inside LogiQA and across its
+official splits. `pilot_disjoint.json` derives from `pilot.json` and
+additionally guarantees that no selected example's content occurs in its
+dataset's official test split and no two selected examples duplicate each
+other. Matching uses passage + question + ordered options for LogiQA and
+the question string for GSM8K — never the non-unique upstream `source_id`.
+The original `pilot.json` is preserved unchanged.
+
+```bash
+python3 scripts/select_disjoint_pilot.py          # seed 42, 20 per dataset
+```
+
+Excluded IDs, the replacement procedure, and per-dataset counts are
+documented inside the manifest. For seed 42 all 40 original IDs happened
+to be eligible (30 LogiQA validation items outside the sample overlap
+test), so the selection equals the original pilot — this is recorded in
+the manifest, not assumed.
+
+## Generation environment (Apple silicon only)
+
+Keep these heavy deps out of the stdlib prep environment:
+
+```bash
+python3 -m venv .venv-mlx
+.venv-mlx/bin/pip install -r requirements-generation.txt
+```
+
+Model: `mlx-community/Qwen2.5-7B-Instruct-4bit`, pinned to revision
+`c26a38f6a37d0a51b4e9a1eb3026530fa35d9fed` in
+`configs/model_qwen2.5-7b-instruct-4bit.json`. Weights download once into
+the normal HuggingFace cache (`~/.cache/huggingface`, ~4.3 GB, not in
+Git); the exact pinned snapshot is loaded via `snapshot_download`.
+
+## Generating
+
+```bash
+.venv-mlx/bin/python scripts/run_generation.py \
+    --manifest data/manifests/pilot_disjoint.json \
+    --conditions answer_only prose_reasoning \
+    --output-dir outputs/pilot_baseline \
+    --max-new-tokens 1024
+```
+
+Options: `--limit-per-dataset N` (e.g. `2` for an 8-response smoke run),
+`--model-config`, `--prompts-dir`.
+
+- Greedy decoding explicitly (`make_sampler(temp=0.0)` → argmax); no
+  repetition penalty or other sampling changes.
+- Fresh conversation + fresh KV cache per (example, condition); model
+  loaded once per process; one question at a time.
+- Each completed response is appended to `responses.jsonl` immediately;
+  failures go to `failures.jsonl` and are retried on the next run.
+- **Resume**: rerun the same command. Completed (example, condition)
+  pairs are skipped. Resuming with a different model revision, prompt
+  template, chat template, manifest content, or `max_new_tokens` is
+  refused (mismatches are printed).
+- `run_config.json` records the pinned model, quantization config,
+  tokenizer/chat-template sha, Python/library versions, sampler spec, and
+  the meaning/unit of every memory field. `invocations.jsonl` logs
+  per-run model-download and load times separately from generation time.
+
+Prompts: `prompts/system.txt` (shared, neutral) + `prompts/<condition>.txt`
+rendered through the model's chat template (`$question_block` is identical
+across conditions — question, plus passage and `A.`-`D.` options for
+LogiQA). New conditions are added by dropping in a new template file. The
+exact rendered prompt is saved in every response record. Generation reads
+only `*.inputs.jsonl` — never answers or metadata.
+
+## Scoring
+
+```bash
+.venv-mlx/bin/python scripts/score_answers.py --run-dir outputs/pilot_baseline
+```
+
+Joins responses with `*.answers.jsonl` on `example_id`. Parses only the
+`FINAL_ANSWER:` line(s): GSM8K compares exact numeric values (Fraction;
+harmless `$`, commas, whitespace, one trailing period normalized), LogiQA
+compares the A–D letter (case/whitespace-insensitive). Missing, malformed,
+or ambiguous finals count as incorrect and stay in the denominator, as do
+generation failures. Reports per dataset × condition: strict accuracy,
+parse-status counts, generation failures, output-limit hits, and
+`answer_only` extra-text flags. Writes `<run-dir>/scores.json`.
+
+## Layout additions
+
+```
+configs/model_qwen2.5-7b-instruct-4bit.json   # pinned repo + revision
+prompts/{system,answer_only,prose_reasoning}.txt
+scripts/select_disjoint_pilot.py            # builds pilot_disjoint.json
+scripts/prompt_lib.py                       # question block + templates
+scripts/run_generation.py                   # resumable MLX-LM generation
+scripts/score_answers.py                    # FINAL_ANSWER scoring
+data/manifests/pilot_disjoint.json          # test-disjoint pilot IDs
+outputs/                                    # run dirs (gitignored)
+requirements-generation.txt                 # pinned MLX-LM env
+```
