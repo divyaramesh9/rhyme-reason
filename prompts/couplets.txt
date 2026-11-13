@@ -1,0 +1,15 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+Pair each reasoning step with a follow-up step.
+Use complete pairs.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines with paired steps>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

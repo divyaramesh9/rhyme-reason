@@ -1,0 +1,16 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+Use an ABAB end-rhyme scheme in each successive group of four reasoning lines:
+the first and third lines rhyme, and the second and fourth lines rhyme.
+Use complete four-line groups.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines following the ABAB rhyme scheme>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

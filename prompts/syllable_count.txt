@@ -1,0 +1,14 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+Use exactly 10 syllables in each reasoning line.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines with exactly 10 syllables each>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

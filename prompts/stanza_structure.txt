@@ -1,0 +1,14 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+Group your reasoning into complete four-line stanzas.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines grouped into four-line stanzas>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

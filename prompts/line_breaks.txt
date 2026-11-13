@@ -1,0 +1,13 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line. 
+Then give your final answer. 
+
+Respond in exactly this format:
+
+REASONING:
+<one reasoning step per line>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

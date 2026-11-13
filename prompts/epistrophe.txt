@@ -1,0 +1,14 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+End each reasoning line with the same word or phrase.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines ending with the same word or phrase>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.

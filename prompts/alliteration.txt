@@ -1,0 +1,14 @@
+$question_block
+
+Think through the problem step by step, putting each reasoning step on a separate line.
+Each reasoning line must have at least three words that start with the same consonant letter.
+Then give your final answer.
+
+Respond in exactly this format:
+
+REASONING:
+<your reasoning in separate lines with alliteration>
+
+FINAL_ANSWER: <answer>
+
+where <answer> is $answer_spec.
