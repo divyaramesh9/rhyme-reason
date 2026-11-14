@@ -314,6 +314,141 @@ def test_disjoint_shortfall_reported():
     assert sel["shortfall"] == 4
 
 
+# --------------------------------------------------------------------------
+# Poetic-condition templates (Part 3)
+# --------------------------------------------------------------------------
+
+POETIC_CONDITIONS = [
+    "line_breaks", "rhyme_scheme", "syllable_counts", "alliteration",
+    "anaphora", "epistrophe", "couplets", "stanza_structures",
+]
+SHARED_LINE_RULE = "putting each reasoning step on a separate line"
+
+
+def test_all_poetic_templates_exist_and_render():
+    t = templates()
+    for cond in POETIC_CONDITIONS:
+        assert cond in t["conditions"], cond
+        for rec in (GSM8K_REC, LOGIQA_REC):
+            m = prompt_lib.build_user_message(rec, cond, t)
+            assert prompt_lib.question_block(rec) in m
+            assert "$question_block" not in m
+            assert "$answer_spec" not in m
+
+
+def test_poetic_conditions_share_instruction_and_output_contract():
+    t = templates()
+    for cond in POETIC_CONDITIONS:
+        m = prompt_lib.build_user_message(GSM8K_REC, cond, t)
+        assert SHARED_LINE_RULE in m, cond
+        assert "REASONING:" in m and "FINAL_ANSWER:" in m
+        # constraints apply to reasoning lines, labels stay plain
+        assert "reasoning lines" in m
+        # dataset-specific final-answer spec still interpolated
+        assert "numeric answer" in m
+    m = prompt_lib.build_user_message(LOGIQA_REC, "line_breaks", t)
+    assert "one letter: A, B, C, or D" in m
+
+
+def test_poetic_conditions_same_question_no_few_shot():
+    t = templates()
+    msgs = {
+        c: prompt_lib.build_user_message(GSM8K_REC, c, t)
+        for c in POETIC_CONDITIONS
+    }
+    block = prompt_lib.question_block(GSM8K_REC)
+    for cond, m in msgs.items():
+        assert block in m
+        low = m.lower()
+        assert "for example" not in low and "e.g." not in low
+        # no prescribed total line count for the whole reasoning
+        assert "total number of lines" not in low
+
+
+def test_poetic_conditions_question_id_pairing():
+    """The question content embedded under each condition matches the
+    example record -- no cross-example contamination."""
+    t = templates()
+    other = dict(GSM8K_REC, example_id="gsm8k-train-99999",
+                 question="A wholly different question about pears.")
+    for cond in POETIC_CONDITIONS + ["answer_only", "prose_reasoning"]:
+        m1 = prompt_lib.build_user_message(GSM8K_REC, cond, t)
+        m2 = prompt_lib.build_user_message(other, cond, t)
+        assert GSM8K_REC["question"] in m1
+        assert other["question"] in m2
+        assert other["question"] not in m1
+        assert GSM8K_REC["question"] not in m2
+
+
+def test_poetic_prompts_no_answer_leakage():
+    t = templates()
+    for cond in POETIC_CONDITIONS:
+        for rec in (GSM8K_REC, LOGIQA_REC):
+            blob = json.dumps(
+                prompt_lib.build_messages(rec, cond, t))
+            assert "####" not in blob
+            assert "gold" not in blob.lower()
+
+
+def test_poetic_conditions_expect_reasoning():
+    t = templates()
+    for cond in POETIC_CONDITIONS + ["prose_reasoning"]:
+        assert rg.expects_reasoning(cond, t)
+    assert not rg.expects_reasoning("answer_only", t)
+
+
+# --------------------------------------------------------------------------
+# Dry run — no model, no writes
+# --------------------------------------------------------------------------
+
+def _tmp_inputs(tmp_path):
+    """Synthetic manifest + processed inputs for dry-run tests."""
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    rec = dict(GSM8K_REC)
+    (processed / "gsm8k_train.inputs.jsonl").write_text(
+        json.dumps(rec) + "\n" + json.dumps(
+            dict(rec, example_id="gsm8k-train-00002",
+                 question="Second question?")) + "\n")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({
+        "pools": {"gsm8k": {"split": "train",
+                            "example_ids": ["gsm8k-train-00001",
+                                            "gsm8k-train-00002"]}}
+    }))
+    return manifest, processed
+
+
+def test_limit_per_dataset_first_n_deterministic(tmp_path):
+    manifest, processed = _tmp_inputs(tmp_path)
+    ex = rg.load_manifest_examples(manifest, 1, processed)
+    assert [e["example_id"] for e in ex] == ["gsm8k-train-00001"]
+    ex2 = rg.load_manifest_examples(manifest, 2, processed)
+    assert [e["example_id"] for e in ex2] == [
+        "gsm8k-train-00001", "gsm8k-train-00002"]
+
+
+def test_dry_run_no_model_no_writes(tmp_path):
+    """--dry-run must render prompts/counts without importing mlx or
+    writing anything. Runs in the test venv, which has no mlx/hf --
+    any premature import would fail the subprocess."""
+    import subprocess, sys as _sys
+    manifest, processed = _tmp_inputs(tmp_path)
+    out_dir = tmp_path / "run_x"
+    proc = subprocess.run(
+        [_sys.executable, "scripts/run_generation.py", "--dry-run",
+         "--manifest", str(manifest), "--processed-dir", str(processed),
+         "--conditions", "line_breaks", "rhyme_scheme",
+         "--output-dir", str(out_dir)],
+        cwd=REPO_ROOT, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    assert "planned responses: 4" in proc.stdout
+    assert "gsm8k-train-00001" in proc.stdout
+    assert GSM8K_REC["question"] in proc.stdout
+    # nothing written: no output dir, no responses file
+    assert not out_dir.exists()
+
+
 @pytest.mark.skipif(
     not (REPO_ROOT / "data/processed/gsm8k_train.inputs.jsonl").exists(),
     reason="processed data not prepared",

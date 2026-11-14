@@ -11,6 +11,7 @@ reports/
 
 # Generation outputs and model-run artifacts are not tracked.
 outputs/
+exports/
 
 __pycache__/
 *.pyc

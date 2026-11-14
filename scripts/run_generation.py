@@ -34,6 +34,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import prompt_lib
+import response_parsing as rp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
@@ -120,14 +121,19 @@ def read_jsonl(path: Path) -> list[dict]:
 # --------------------------------------------------------------------------
 
 def load_manifest_examples(manifest_path: Path,
-                           limit_per_dataset: int | None) -> list[dict]:
+                           limit_per_dataset: int | None,
+                           processed_dir: Path = PROCESSED_DIR) -> list[dict]:
     """Expand a pilot manifest into ordered input records (model-visible
-    fields only -- answers are never read here)."""
+    fields only -- answers are never read here).
+
+    --limit-per-dataset takes the first N manifest IDs per dataset, so the
+    same example set is used for every requested condition.
+    """
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     examples = []
     for dataset, pool in manifest["pools"].items():
         split = pool["split"]
-        inputs_path = PROCESSED_DIR / f"{dataset}_{split}.inputs.jsonl"
+        inputs_path = processed_dir / f"{dataset}_{split}.inputs.jsonl"
         by_id = {r["example_id"]: r for r in read_jsonl(inputs_path)}
         ids = pool["example_ids"]
         if limit_per_dataset is not None:
@@ -267,6 +273,48 @@ def memory_snapshot(gen_response_peak_gib) -> dict:
 # Generation
 # --------------------------------------------------------------------------
 
+def expects_reasoning(condition: str, templates: dict) -> bool:
+    """A condition expects a REASONING: section iff its template asks for
+    one (the answer_only template does not)."""
+    return "REASONING:" in templates["conditions"][condition].template
+
+
+def dry_run_report(examples: list[dict], conditions: list[str],
+                   templates: dict, model_cfg: dict,
+                   manifest_path: Path, done: set) -> str:
+    """Render planned prompts + counts without touching a model."""
+    lines = [
+        "DRY RUN -- no model loaded or downloaded; nothing written.",
+        f"manifest: {manifest_path} (sha256 {sha256_file(manifest_path)[:12]}...)",
+        f"model (not loaded): {model_cfg['repo_id']}@"
+        f"{model_cfg['revision']}",
+        f"system message: {templates['system'].strip()!r}",
+        "",
+    ]
+    work = [
+        (rec, cond) for rec in examples for cond in conditions
+        if (rec["example_id"], cond) not in done
+    ]
+    n_pairs = len(examples) * len(conditions)
+    lines.append(
+        f"planned responses: {n_pairs} "
+        f"({len(examples)} examples x {len(conditions)} conditions"
+        + (f"; {len(done)} already completed" if done else "")
+        + f"; {len(work)} would be generated now)"
+    )
+    lines.append("")
+    for i, (rec, cond) in enumerate(
+            [(r, c) for r in examples for c in conditions], 1):
+        skipped = (rec["example_id"], cond) in done
+        lines.append(
+            f"=== [{i}/{n_pairs}] {rec['example_id']} | {rec['dataset']} "
+            f"| {cond}{' [already done]' if skipped else ''} ==="
+        )
+        lines.append(prompt_lib.build_user_message(rec, cond, templates))
+        lines.append("")
+    return "\n".join(lines)
+
+
 def run_one(model, tokenizer, mx, stream_generate, make_sampler,
             messages, max_new_tokens: int) -> dict:
     """Generate one response; returns stats incl. raw text and timing.
@@ -308,7 +356,7 @@ def run_one(model, tokenizer, mx, stream_generate, make_sampler,
 
     return {
         "prompt": prompt_text,
-        "response": "".join(parts),
+        "raw_response": "".join(parts),
         "prompt_tokens": prompt_tokens,
         "generated_tokens": gen_tokens,
         "prompt_tps": prompt_tps,
@@ -336,6 +384,12 @@ def main() -> int:
     ap.add_argument("--model-config", type=Path, default=DEFAULT_MODEL_CONFIG,
                     help="JSON with repo_id + pinned revision")
     ap.add_argument("--prompts-dir", type=Path, default=prompt_lib.PROMPT_DIR)
+    ap.add_argument("--processed-dir", type=Path, default=PROCESSED_DIR,
+                    help="directory holding *.inputs.jsonl (default: "
+                         "data/processed)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="render prompts + planned counts and exit; no "
+                         "model load/download, nothing written")
     args = ap.parse_args()
 
     available = prompt_lib.available_conditions(args.prompts_dir)
@@ -346,7 +400,8 @@ def main() -> int:
         )
     templates = prompt_lib.load_templates(args.prompts_dir)
     model_cfg = json.loads(args.model_config.read_text(encoding="utf-8"))
-    examples = load_manifest_examples(args.manifest, args.limit_per_dataset)
+    examples = load_manifest_examples(
+        args.manifest, args.limit_per_dataset, args.processed_dir)
 
     out_dir: Path = args.output_dir
     responses_path = out_dir / RESPONSES_FILE
@@ -357,6 +412,12 @@ def main() -> int:
     done = {
         (r["example_id"], r["condition"]) for r in read_jsonl(responses_path)
     }
+
+    # ---- dry run: render and exit before any model/HF import ----------
+    if args.dry_run:
+        print(dry_run_report(examples, args.conditions, templates,
+                             model_cfg, args.manifest, done))
+        return 0
 
     # ---- resolve pinned model snapshot (cached after first download) ----
     from huggingface_hub import snapshot_download
@@ -382,6 +443,14 @@ def main() -> int:
     chat_template = getattr(tokenizer, "chat_template", None)
     chat_sha = sha256_text(chat_template) if isinstance(
         chat_template, str) else "unavailable"
+
+    model_meta = {
+        "repo": model_cfg["repo_id"],
+        "revision": model_cfg["revision"],
+        "quantization": json.loads(
+            (snapshot_dir / "config.json").read_text()
+        ).get("quantization"),
+    }
 
     compat = build_compatibility(model_cfg, args.manifest, args.prompts_dir,
                                  args.conditions, args.max_new_tokens,
@@ -461,11 +530,16 @@ def main() -> int:
                       f"({type(e).__name__}: {e})")
                 continue
 
+            parsed = rp.extract_reasoning_fields(
+                result["raw_response"], expects_reasoning(cond, templates))
             record = {
                 "example_id": eid,
                 "dataset": rec["dataset"],
                 "condition": cond,
+                "run_id": out_dir.name,
+                "model": model_meta,
                 **result,
+                **parsed,
                 "recorded_at": utc_now(),
             }
             append_jsonl(responses_path, record)

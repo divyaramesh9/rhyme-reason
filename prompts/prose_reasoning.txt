@@ -1,6 +1,6 @@
 $question_block
 
-Think through the problem step by step in ordinary prose, then give your final answer. Respond in exactly this format:
+Think through the problem step by step, then give your final answer. Respond in exactly this format:
 
 REASONING:
 <your reasoning in ordinary prose>

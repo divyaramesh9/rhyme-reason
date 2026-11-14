@@ -2,7 +2,12 @@ $question_block
 
 Think through the problem step by step, putting each reasoning step on a separate line.
 Pair each reasoning step with a follow-up step.
-Use complete pairs.
+Use complete pairs. 
+Separate each pair with two blank lines.
+Do not enumerate the lines.
+Keep the reasoning concise, with each line contributing to the solution.
+If the number of lines is odd, the last line does not need a follow-up.
+Only the reasoning lines need to follow this rule; the REASONING and FINAL_ANSWER labels stay plain.
 Then give your final answer.
 
 Respond in exactly this format:

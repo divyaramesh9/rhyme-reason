@@ -24,11 +24,14 @@ from datetime import datetime, timezone
 from fractions import Fraction
 from pathlib import Path
 
+import response_parsing as rp
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
 
-FINAL_ANSWER_RE = re.compile(r"^[ \t]*FINAL_ANSWER:[ \t]*(.*?)[ \t]*$",
-                             re.MULTILINE)
+FINAL_ANSWER_RE = rp.FINAL_ANSWER_LINE_RE
+extract_final_answer = rp.extract_final_answer
+
 NUMERIC_RE = re.compile(r"^-?\d+(\.\d+)?$")
 LETTER_RE = re.compile(r"^[ABCD]\.?$", re.IGNORECASE)
 
@@ -38,18 +41,6 @@ PARSE_STATUSES = ("parsed", "missing", "malformed", "ambiguous")
 # --------------------------------------------------------------------------
 # Final-answer extraction and normalization
 # --------------------------------------------------------------------------
-
-def extract_final_answer(raw: str) -> tuple[str, list[str]]:
-    """Collect FINAL_ANSWER: payloads. Returns (status, values).
-
-    status: 'ok' (all values agree) | 'missing' | 'ambiguous'.
-    """
-    values = [m.strip() for m in FINAL_ANSWER_RE.findall(raw)]
-    if not values:
-        return "missing", []
-    if len(set(values)) > 1:
-        return "ambiguous", values
-    return "ok", [values[0]]
 
 
 def normalize_gsm8k(text: str) -> Fraction | None:
@@ -176,7 +167,7 @@ def score_run(run_dir: Path) -> dict:
         eid, cond = r["example_id"], r["condition"]
         gold = answers.get(eid)
         scored = score_response(
-            r["dataset"], r["response"], gold["gold_answer"], cond
+            r["dataset"], rp.record_raw_text(r), gold["gold_answer"], cond
         ) if gold else None
         per_response.append({
             "example_id": eid,
@@ -185,6 +176,7 @@ def score_run(run_dir: Path) -> dict:
             "hit_output_limit": r.get("hit_output_limit"),
             "generated_tokens": r.get("generated_tokens"),
             "elapsed_seconds": r.get("elapsed_seconds"),
+            "reasoning_parse_status": r.get("reasoning_parse_status"),
             "scored": scored is not None,
             **(scored or {"parse_status": "no_gold", "correct": False,
                           "normalized_prediction": None,

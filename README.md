@@ -221,7 +221,7 @@ Citations:
 
 ---
 
-# Part 2 — Local generation, scoring, and the development baseline pilot
+# Local generation, scoring, and the development baseline pilot
 
 Runs `mlx-community/Qwen2.5-7B-Instruct-4bit` locally under two development
 conditions — `answer_only` and `prose_reasoning` — over a test-disjoint
@@ -325,4 +325,101 @@ scripts/score_answers.py                    # FINAL_ANSWER scoring
 data/manifests/pilot_disjoint.json          # test-disjoint pilot IDs
 outputs/                                    # run dirs (gitignored)
 requirements-generation.txt                 # pinned MLX-LM env
+```
+
+---
+
+# Poetic-constraint conditions, reasoning capture, and exports
+
+Eight independently selectable development conditions now exist as
+`prompts/<condition>.txt`: `line_breaks`, `rhyme_scheme`,
+`syllable_counts`, `alliteration`, `anaphora`, `epistrophe`,
+`couplets`, `stanza_structures`. They share the system message, question
+format, one-step-per-line instruction, and `REASONING:`/`FINAL_ANSWER:`
+contract; device rules constrain only the reasoning lines. Exact rules,
+within-line vs across-line scope, grouping requirements, the intended
+`line_breaks` comparison, known device overlaps, and open adherence-
+scoring decisions are in **`docs/conditions.md`**. These are versioned
+development specifications, not frozen final-study prompts. Poetic
+compliance is **not** validated or scored anywhere in this stage.
+
+## Previewing prompts (no model)
+
+`--dry-run` renders the selected prompts and the planned response count,
+then exits before any model import/download — nothing is written.
+`--limit-per-dataset N` takes the first N manifest IDs per dataset, so
+every condition sees the same examples.
+
+```bash
+# 2 questions/dataset x 2 conditions = 8 planned responses
+.venv-mlx/bin/python scripts/run_generation.py --dry-run \
+    --manifest data/manifests/pilot_disjoint.json \
+    --conditions line_breaks rhyme_scheme \
+    --output-dir outputs/poetic_smoke --limit-per-dataset 2
+```
+
+## Generating (loads the model, writes responses)
+
+Same command minus `--dry-run`. The dev manifest has 20 GSM8K + 20
+LogiQA examples — the 2-per-dataset run plans **8 responses**, the full
+eight-condition pilot plans **320** (40 × 8). Use a separate `--output-dir`
+per configuration; resume and mismatch safeguards are unchanged.
+
+```bash
+.venv-mlx/bin/python scripts/run_generation.py \
+    --manifest data/manifests/pilot_disjoint.json \
+    --conditions line_breaks rhyme_scheme \
+    --output-dir outputs/poetic_smoke --limit-per-dataset 2 \
+    --max-new-tokens 1024
+
+# after inspecting the smoke run, the full pilot:
+.venv-mlx/bin/python scripts/run_generation.py \
+    --manifest data/manifests/pilot_disjoint.json \
+    --conditions line_breaks rhyme_scheme syllable_counts alliteration \
+        anaphora epistrophe couplets stanza_structures \
+    --output-dir outputs/poetic_pilot --max-new-tokens 1024
+```
+
+## What each response record contains (`responses.jsonl`, canonical)
+
+`example_id`, `dataset`, `condition`, `run_id`, `model` (repo, exact
+revision, quantization), `prompt`, **`raw_response`** (unchanged),
+**`reasoning_text`** (literal text between `REASONING:` and the first
+`FINAL_ANSWER:` marker — whitespace preserved, never normalized),
+**`reasoning_parse_status`** (`extracted` / `partial_missing_final_answer`
+/ `missing_reasoning_marker` / `ambiguous_markers` / `not_applicable` for
+`answer_only`), `final_answer_text` + `final_answer_values`,
+`prompt_tokens`, `generated_tokens`, `elapsed_seconds`, `finish_reason`,
+`hit_output_limit` (truncated outputs are retained and flagged, never
+retried or extended), `memory`, `recorded_at`. Failures stay in
+`failures.jsonl`. These fields capture only the model's *visible* output.
+
+Backfill existing runs (e.g. `outputs/pilot_baseline`) without touching
+their originals — writes a new derived file:
+
+```bash
+.venv-mlx/bin/python scripts/extract_reasoning.py \
+    --run-dir outputs/pilot_baseline
+# -> outputs/pilot_baseline/responses.with_reasoning.jsonl
+```
+
+## Readable exports
+
+```bash
+.venv-mlx/bin/python scripts/export_responses.py \
+    --run-dir outputs/pilot_baseline --export-root exports
+# -> exports/<run_id>/<dataset>/<condition>/<model>__<dataset>__<condition>__<example_id>.txt
+```
+
+One UTF-8 `.txt` per response: example ID, dataset, condition, run, model
+reference, finish info, the question as shown to the model, and the
+complete raw response. Filenames embed model/dataset/condition/ID so they
+cannot collide. `exports/` is gitignored like `outputs/`.
+
+## Scoring
+
+Unchanged — strict `FINAL_ANSWER:` scoring on either record schema:
+
+```bash
+.venv-mlx/bin/python scripts/score_answers.py --run-dir outputs/poetic_smoke
 ```

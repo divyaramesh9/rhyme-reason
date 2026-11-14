@@ -1,13 +1,16 @@
 $question_block
 
 Think through the problem step by step, putting each reasoning step on a separate line.
-Begin each reasoning line with the same word or phrase.
+Begin each reasoning line with the phrase "We know ".
+Do not enumerate the lines.
+Keep the reasoning concise, with each line contributing to the solution.
+Only the reasoning lines need to follow this rule; the REASONING and FINAL_ANSWER labels stay plain.
 Then give your final answer.
 
 Respond in exactly this format:
 
 REASONING:
-<your reasoning in separate lines beginning with the same word or phrase>
+<your reasoning in separate lines beginning with "We know ">
 
 FINAL_ANSWER: <answer>
 

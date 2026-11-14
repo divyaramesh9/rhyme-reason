@@ -2,6 +2,9 @@ $question_block
 
 Think through the problem step by step, putting each reasoning step on a separate line.
 Use exactly 10 syllables in each reasoning line.
+Do not enumerate the lines.
+Keep the reasoning concise, with each line contributing to the solution.
+Only the reasoning lines need to follow this rule; the REASONING and FINAL_ANSWER labels stay plain.
 Then give your final answer.
 
 Respond in exactly this format:

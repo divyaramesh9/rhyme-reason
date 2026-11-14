@@ -1,15 +1,19 @@
 $question_block
 
 Think through the problem step by step, putting each reasoning step on a separate line.
-Use an ABAB end-rhyme scheme in each successive group of four reasoning lines:
-the first and third lines rhyme, and the second and fourth lines rhyme.
-Use complete four-line groups.
+Make the last words of lines 1 and 2 rhyme, then lines 3 and 4, and so on.
+Use different rhyming words within each pair, not repetitions of the same word.
+The rhyming words must be part of the reasoning sentences; do not append disconnected words just to create a rhyme.
+Do not enumerate the lines.
+Keep the reasoning concise, with each line contributing to the solution.
+Use as many reasoning lines as needed. If the number of lines is odd, the last line does not need to rhyme.
+Only the reasoning lines need to follow this rule; the REASONING and FINAL_ANSWER labels stay plain.
 Then give your final answer.
 
 Respond in exactly this format:
 
 REASONING:
-<your reasoning in separate lines following the ABAB rhyme scheme>
+<your reasoning in separate lines, with rhyming endings within each complete pair>
 
 FINAL_ANSWER: <answer>
 
