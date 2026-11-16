@@ -1,0 +1,19 @@
+{
+  "_instructions": "After manually reviewing the screening responses (see docs/two_stage_design.md), fill in each device: decision = \"retain\" or \"exclude\", reason = short justification based on observed adherence. Then run: python3 scripts/freeze_selection.py freeze",
+  "retained_examples_note": "Selection must be based on observed poetic adherence in the screening review, not on answer accuracy. A common retained set is used for all models in the final comparison; per-model/dataset differences go in 'model_dataset_differences' as descriptive notes only.",
+  "devices": {
+    "rhyme_scheme":      {"decision": "retain", "reason": "high adherence across two models"},
+    "syllable_counts":   {"decision": "exclude", "reason": "zero adherence across models"},
+    "alliteration":      {"decision": "retain", "reason": "high adherence across two models"},
+    "anaphora":          {"decision": "retain", "reason": "high adherence across all three models"},
+    "epistrophe":        {"decision": "retain", "reason": "high adherence across all three models"},
+    "meter":             {"decision": "retain", "reason": "high adherence with gpt, not with other models"},
+    "couplets":          {"decision": "exclude", "reason": "line breaks barely present"},
+    "stanza_structures": {"decision": "exclude", "reason": "line breaks barely present"}
+  },
+  "model_dataset_differences": "",
+  "source_screening_runs": [],
+  "source_review_files": [],
+  "unresolved_judgments": "",
+  "limitations": ""
+}

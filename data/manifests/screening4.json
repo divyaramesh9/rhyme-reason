@@ -1,0 +1,26 @@
+{
+  "name": "screening4",
+  "stage": "screening",
+  "purpose": "Stage-1 poetic-adherence screening set: 4 questions total (2 GSM8K train + 2 LogiQA validation) shared by every model and every condition. 4 questions x 8 poetic devices x 3 models = 96 poetic responses; adding the 3 controls on the same questions gives 36 more (132 total).",
+  "selection_rule": "First 2 example_ids per pool of data/manifests/pilot_disjoint.json, i.e. the same questions a '--limit-per-dataset 2' run over that manifest would use. Inherits that manifest's test-disjointness guarantees.",
+  "derived_from": "data/manifests/pilot_disjoint.json",
+  "matching_rule": "gsm8k: exact question string; logiqa_v2: (context, question, option texts in A,B,C,D label order). The non-unique upstream source_id is never used.",
+  "pools": {
+    "gsm8k": {
+      "split": "train",
+      "example_ids": [
+        "gsm8k-train-00204",
+        "gsm8k-train-00244"
+      ],
+      "selected_count": 2
+    },
+    "logiqa_v2": {
+      "split": "validation",
+      "example_ids": [
+        "logiqa_v2-validation-00051",
+        "logiqa_v2-validation-00061"
+      ],
+      "selected_count": 2
+    }
+  }
+}

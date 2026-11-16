@@ -1,0 +1,47 @@
+{
+  "frozen_at": "2026-11-16T23:46:09.253028+00:00",
+  "selection_file": "/Users/divyaramesh/Desktop/Fall 2026/6975/project/configs/device_selection.json",
+  "selection_file_sha256": "6bd7041cb38313f913fd83341ca16c5d93c7417849c20a083784c08474c16aa7",
+  "retained_devices": [
+    "rhyme_scheme",
+    "alliteration",
+    "anaphora",
+    "epistrophe",
+    "meter"
+  ],
+  "excluded_devices": [
+    "syllable_counts",
+    "couplets",
+    "stanza_structures"
+  ],
+  "final_conditions": [
+    "answer_only",
+    "prose_reasoning",
+    "line_breaks",
+    "rhyme_scheme",
+    "alliteration",
+    "anaphora",
+    "epistrophe",
+    "meter"
+  ],
+  "prompt_template_sha256": {
+    "system": "0eec75335d8d3b4317e0ef3b148315cfcf66885217e7340801796affeb824dc1",
+    "rhyme_scheme": "4ec49a64926931a6ac7c1c735872ba5ce4eb03be2e1163a242d71d08beb43526",
+    "syllable_counts": "650c2746956ff20b0896bc5a4fd7ef265bc30aa8c14d0f64ec1efe4132a959b3",
+    "alliteration": "efcf41f011e95e7ff4fda9183e2b41078a1ee5f6a29d5f1222f4e5e4ebaabd5b",
+    "anaphora": "6031c1a92d3e64a6cda2cd709e5b60b28c6febb55049a8d01632969971337505",
+    "epistrophe": "aedef25a157978f3f8183158917db7ee138c7ada5a315068c701739068cad32d",
+    "meter": "a04f066927821a282cb37de3ae65efa13fc7984a8e4453aaa5d2bbf5dbd4c722",
+    "couplets": "19d5c3875fdc013ba5b9a5b1b764e7036ed2e1cf66165cc9d4841be80da46d6b",
+    "stanza_structures": "f32d170f2252a45349012e83d43f1b4b1c69756bc5cfcfe4256902a61df317e4",
+    "answer_only": "d1fcd963cf9e291a24125d4ffa5db0987066a5ec24f78e1e29e2e254f2f02425",
+    "prose_reasoning": "a9d70bdff8f750e3ec16942934eeda4f39fa4dc530e9eed441f97c86a3095cf7",
+    "line_breaks": "010493423ea9dd900b9c14e3188e031e29a08ad036db734cb752756e547e3a3e"
+  },
+  "model_dataset_differences": "",
+  "source_screening_runs": [],
+  "source_review_files": [],
+  "unresolved_judgments": "",
+  "limitations": "",
+  "note": "Common retained device set used for ALL models in the final comparison; per-model differences are documented descriptively, not substituted."
+}

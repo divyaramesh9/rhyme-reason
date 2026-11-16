@@ -1,0 +1,23 @@
+{
+  "backend": "openai",
+  "model": "gpt-4o-2024-08-06",
+  "temperature": 0.0,
+  "max_completion_tokens_param": "max_completion_tokens",
+  "pricing": {
+    "input_usd_per_1m": 2.50,
+    "output_usd_per_1m": 10.00,
+    "currency": "USD",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "verified_utc": "2026-11-14",
+    "note": "Cached-input and Batch discounts exist but are never assumed; every request is priced at full input/output rates."
+  },
+  "status": {
+    "lifecycle": "deprecated",
+    "shutdown_date": "2027-01-14",
+    "deprecated_notice": "2026-10-14",
+    "source": "https://developers.openai.com/api/docs/deprecations",
+    "verified_utc": "2026-11-14",
+    "note": "Deprecated but still serving API requests until 2027-01-14. Dated snapshot chosen over the moving 'gpt-4o' alias. Replacement suggested by OpenAI (gpt-6-luna) is a reasoning-by-default model and is NOT a drop-in substitute for this study."
+  },
+  "notes": "OpenAI GPT-4o, pinned to the 2024-08-06 dated snapshot (the API default snapshot). temperature=0 is requested for reproducibility; OpenAI does not guarantee bit-identical repeated outputs. max output is capped at 1024 via max_completion_tokens. Access must be verified per-account (scripts/check_openai_access.py). Credentials come from OPENAI_API_KEY only."
+}

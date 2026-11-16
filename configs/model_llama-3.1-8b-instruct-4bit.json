@@ -1,0 +1,6 @@
+{
+  "backend": "mlx_local",
+  "repo_id": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+  "revision": "241a666dad6cb93c8ff213d39a7f34a36bf26db4",
+  "notes": "4-bit MLX community conversion of Meta-Llama-3.1-8B-Instruct (base source: meta-llama/Meta-Llama-3.1-8B-Instruct). Revision is the repo main commit sha as resolved 2026-11-14 (last modified upstream 2024-11-26). The mlx-community repo is not gated, but the Llama 3.1 Community License still applies to its use. Loaded locally via huggingface_hub.snapshot_download(repo_id, revision) + mlx_lm.load(snapshot_path) -- identical to the Qwen path. Tokenizer + chat template ship in the repo (tokenizer_config.json). ~4.9 GB of weights; comfortable on 24 GB unified memory. Download is manual: huggingface_hub.snapshot_download or 'hf download mlx-community/Meta-Llama-3.1-8B-Instruct-4bit' in .venv-mlx."
+}

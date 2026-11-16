@@ -1,0 +1,15 @@
+{
+  "ledger_path": "outputs/openai_ledger.jsonl",
+  "stage_to_bucket": {
+    "screening": "preliminary",
+    "controls": "preliminary",
+    "evaluation": "evaluation",
+    "development": "development"
+  },
+  "bucket_caps_usd": {
+    "preliminary": 5.0
+  },
+  "total_cap_usd": 20.0,
+  "buffer_usd_outside_caps": 5.0,
+  "notes": "Editable spending caps for OpenAI generation in this project (user has ~$25 credit total). total_cap_usd covers ALL tracked OpenAI spending across every stage. bucket_caps_usd additionally limits named buckets; the 'preliminary' bucket (screening + controls stages) is capped at $5. The evaluation stage has no sub-cap of its own -- it is bounded only by the $20 total, which leaves ~$5 unspent as a buffer outside planned spending. Caps are limits, not targets -- they are never raised automatically. The ledger tracks only this pipeline's requests, not the account's real balance or spending made elsewhere."
+}

@@ -1,425 +1,149 @@
-# Poetic Constraints on LLM Reasoning — Dataset Preparation
+# Poetic Constraints on LLM Reasoning
 
-This stage prepares two benchmarks for a study of how poetic constraints on an
-LLM's visible reasoning affect answer accuracy:
+A study of how poetic constraints on an LLM's *visible* reasoning affect
+answer accuracy. Two benchmarks are prepared locally; responses are
+generated under poetic and control conditions, adherence is judged
+manually, and accuracy is compared on held-out questions.
 
 | Dataset | Task | Source |
 |---|---|---|
 | **GSM8K** | grade-school math word problems | [openai/grade-school-math](https://github.com/openai/grade-school-math) |
-| **LogiQA v2** | logical reasoning, English multiple-choice reading comprehension (MRC) | [csitfun/LogiQA2.0](https://github.com/csitfun/LogiQA2.0) |
+| **LogiQA v2** | logical multiple-choice reading comprehension | [csitfun/LogiQA2.0](https://github.com/csitfun/LogiQA2.0) |
 
-Everything runs locally on CPU with the Python standard library. No model
-inference, prompt engineering, judging, or training happens in this stage.
+## Documentation
 
-## Installation
+| file | contents |
+|---|---|
+| `docs/data_prep.md` | dataset schemas, splits, pilot manifests, validation, licensing, caveats |
+| `docs/conditions.md` | device rules, grouping requirements, known overlaps |
+| `docs/two_stage_design.md` | full screening → review → freeze → evaluation methodology |
+| `docs/blank_line_audit.md` | whitespace-preservation audit of the response path |
+
+## Environments
 
 Requires Python 3.10+.
 
 ```bash
-pip3 install -r requirements.txt   # only needed for running the tests (pytest)
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+python3 -m venv .venv-mlx && .venv-mlx/bin/pip install -r requirements-generation.txt
 ```
 
-`scripts/prepare_data.py` itself uses only the standard library and needs no
-dependencies.
+- `.venv` — stdlib tools + tests only (offline scripts run under plain
+  `python3` too, as they are stdlib-only).
+- `.venv-mlx` — generation: `mlx-lm` (Apple silicon) + `openai`.
 
-## Reproducing the prepared data
+## Data preparation
 
 ```bash
-# Fetch raw files from pinned commits, verify checksums, prepare, validate:
-python3 scripts/prepare_data.py --download
-
-# Later runs can omit --download (raw files are already present):
-python3 scripts/prepare_data.py
-
-# Pilot size and seed are configurable:
-python3 scripts/prepare_data.py --seed 42 --pilot-size 20
+python3 scripts/prepare_data.py --download   # once; re-verify + prepare later without the flag
+python3 -m pytest tests/ -v                  # tests
 ```
 
-`--download` fetches each raw file once, records its SHA-256 in
-`data/manifests/sources.json`, and refuses to overwrite a preserved raw file
-whose checksum disagrees with the manifest. Every subsequent run re-verifies
-the raw files against that manifest before preparing.
+Standardized `*.inputs.jsonl` / `*.answers.jsonl` per split under
+`data/processed/`; pilot manifests under `data/manifests/`. Details:
+`docs/data_prep.md`.
 
-## Running checks and tests
+## Generating responses
+
+One command for all backends and stages:
 
 ```bash
-python3 scripts/prepare_data.py     # preparation always ends with validation
-python3 -m pytest tests/ -v         # unit tests
+.venv-mlx/bin/python scripts/run_generation.py \
+    --manifest data/manifests/screening4.json \
+    --conditions answer_only prose_reasoning \
+    --model-config configs/model_qwen2.5-7b-instruct-4bit.json \
+    --output-dir outputs/<run_name> --stage <stage>
 ```
 
-Validation results land in `reports/data_validation.json`. The script exits
-non-zero if any check fails or any source record is malformed; malformed
-records are listed explicitly under `unresolved_errors` — nothing is silently
-dropped or guessed.
+Key flags: `--dry-run` (render prompts + counts, no model/network/writes),
+`--limit-per-dataset N`, `--stage screening|controls|evaluation`,
+`--max-new-tokens 1024` (default cap, identical for all models),
+`--budget-config` for paid runs.
+
+- Prompts: `prompts/system.txt` + `prompts/<condition>.txt`, rendered through
+  the model's chat template (local) or as API messages (OpenAI).
+- Each completed response is appended to `<output-dir>/responses.jsonl`
+  immediately; failures go to `failures.jsonl`.
+- **Resume**: rerun the same command — completed (example, condition) pairs
+  are skipped. Changed model/prompts/manifest/settings → use a new
+  `--output-dir`; resuming incompatible output is refused.
+
+## Conditions
+
+Controls: `answer_only`, `prose_reasoning`, `line_breaks`.
+Poetic devices (reasoning only): `rhyme_scheme`, `syllable_counts`,
+`alliteration`, `anaphora`, `epistrophe`, `meter`, `couplets`,
+`stanza_structures`. Rules and overlaps: `docs/conditions.md`.
+
+## Scoring
+
+```bash
+python3 scripts/score_answers.py --run-dir outputs/<run_name>
+```
+
+Strict `FINAL_ANSWER:` parsing; missing/malformed/ambiguous finals and
+generation failures stay in the denominator. Writes `<run-dir>/scores.json`.
+
+## Records, exports, inspection
+
+Each response record keeps `raw_response` verbatim and `reasoning_text` as a
+literal slice between `REASONING:`/`FINAL_ANSWER:` (whitespace preserved),
+plus `stage`, `messages`, model/provider/token/finish metadata. Full field
+list: `docs/two_stage_design.md`.
+
+```bash
+python3 scripts/export_responses.py --run-dir <run> --export-root exports   # one .txt per response
+python3 scripts/inspect_response.py --run-dir <run> --scan                  # blank-line audit
+python3 scripts/inspect_response.py --run-dir <run> --example-id <id> --condition <c>
+python3 scripts/extract_reasoning.py --run-dir <run>   # non-destructive backfill of old records
+```
+
+## Two-stage study
+
+Full methodology: `docs/two_stage_design.md`.
+
+**Stage 1 — screening.** `data/manifests/screening4.json` = 4 questions
+(`gsm8k-train-00204`, `gsm8k-train-00244`, `logiqa_v2-validation-00051`,
+`logiqa_v2-validation-00061`) × 8 devices × 3 models = **96 responses**
+(+36 controls). A feasibility screen, not a population estimate.
+
+**Stage 2 — evaluation.** Manually label adherence, freeze a retained
+device set, then compare accuracy on a content-disjoint test manifest.
+
+| model | config | backend |
+|---|---|---|
+| Qwen2.5-7B-Instruct-4bit (pinned) | `configs/model_qwen2.5-7b-instruct-4bit.json` | `mlx_local` |
+| Llama-3.1-8B-Instruct-4bit (pinned) | `configs/model_llama-3.1-8b-instruct-4bit.json` | `mlx_local` |
+| GPT-4o `gpt-4o-2024-08-06` | `configs/model_gpt-4o-2024-08-06.json` | `openai` |
+
+Workflow commands (all offline unless noted):
+
+```bash
+python3 scripts/check_local_setup.py --model-config configs/model_llama-3.1-8b-instruct-4bit.json
+python3 scripts/check_openai_access.py --model-config configs/model_gpt-4o-2024-08-06.json
+python3 scripts/estimate_cost.py --manifest <m> --conditions ... --model-config <gpt4o config>
+python3 scripts/prepare_review.py --run-dirs <runs...> --out-dir reviews/<name>
+python3 scripts/import_review.py --csv reviews/<name>/review.csv
+python3 scripts/plot_review.py --summary reviews/<name>/review.summary.json  # needs matplotlib
+python3 scripts/freeze_selection.py freeze        # after editing configs/device_selection.json
+python3 scripts/build_eval_manifest.py --size-per-dataset N
+python3 scripts/compare_accuracy.py --run-dirs <eval runs...>
+```
+
+OpenAI spending is ledger-guarded (`outputs/openai_ledger.jsonl`):
+$5 preliminary cap, $20 total cap, conservative reservation before each
+request. Inspect with `python3 scripts/budget.py --report`.
 
 ## Layout
 
 ```
-scripts/prepare_data.py        # download + standardize + pilot + validate
-data/raw/                      # untouched upstream downloads (gitignored)
-data/processed/                # standardized JSONL outputs (gitignored)
-data/manifests/sources.json    # pinned URLs, commits, sha256, license (tracked)
-data/manifests/pilot.json      # pilot example IDs (tracked)
-reports/data_validation.json   # latest validation report (gitignored)
-tests/test_prepare_data.py
-```
-
-### Processed files
-
-For each split there are two files joined by `example_id`, plus a metadata
-file for LogiQA:
-
-```
-data/processed/gsm8k_train.inputs.jsonl        / .answers.jsonl
-data/processed/gsm8k_test.inputs.jsonl         / .answers.jsonl
-data/processed/logiqa_v2_train.inputs.jsonl    / .answers.jsonl / .metadata.jsonl
-data/processed/logiqa_v2_validation.inputs…    / .answers.jsonl / .metadata.jsonl
-data/processed/logiqa_v2_test.inputs.jsonl     / .answers.jsonl / .metadata.jsonl
-```
-
-**`*.inputs.jsonl`** — model-visible fields only. These files never contain
-answers or answer-revealing metadata.
-
-| field | meaning |
-|---|---|
-| `example_id` | unique ID: `{dataset}-{split}-{NNNNN}` where `NNNNN` is the 0-based line number in the raw file (deterministic; no `hash()`) |
-| `dataset` | `gsm8k` or `logiqa_v2` |
-| `split` | `train`, `validation`, or `test` |
-| `source_id` | upstream identifier if one exists (LogiQA `id` — **not unique upstream**, see caveats); `null` for GSM8K |
-| `question` | question text, verbatim |
-| `context` | LogiQA reading passage (`text` field upstream); `null` for GSM8K |
-| `options` | `{"A": …, "B": …, "C": …, "D": …}` for LogiQA, option text verbatim — labels live in the keys so existing letter-like text (e.g. `"A.I …"`, `"B. t. …"`) is never duplicated; `null` for GSM8K |
-
-**`*.answers.jsonl`** — answer information, kept out of model inputs.
-
-| field | meaning |
-|---|---|
-| `example_id` | join key |
-| `gold_answer` | normalized answer: GSM8K = final integer/decimal as a string (see normalization below); LogiQA = letter `A`–`D` |
-| `source_answer` | original answer value preserved unchanged (GSM8K: full solution string incl. `<<…>>` calculator annotations and `####` delimiter; LogiQA: original 0-based index) |
-| `reference_reasoning` | GSM8K solution text before the `####` delimiter, verbatim; `null` for LogiQA (no reference explanations exist — none are invented) |
-
-**`*.metadata.jsonl`** (LogiQA only) — `example_id`, `source_id`, and the
-upstream `type` reasoning-category annotations. Preserved for possible
-stratified analysis; never part of model inputs.
-
-### GSM8K answer handling
-
-The source `answer` field is `explanation + "\n#### " + final`. Extraction uses
-only the explicit `####` delimiter — never an arbitrary number from the text.
-
-Normalization rule for `gold_answer`: strip whitespace, remove `,` thousands
-separators (`"1,080"` → `"1080"`), and require the result to match
-`-?\d+(\.\d+)?`. Anything else (missing/multiple delimiters, non-numeric
-finals, fractions) is flagged in `unresolved_errors` and preparation fails —
-ambiguous answers are never guessed. In this release all 8,792 finals
-normalize cleanly to integers.
-
-### LogiQA answer handling
-
-Upstream `answer` is a **0-based index** into `options` (verified against the
-upstream README example and `utils_mrc.py`). It maps explicitly `0→A, 1→B,
-2→C, 3→D`. Option order and text are preserved exactly. Out-of-range indices
-are flagged as errors.
-
-## Splits: development vs. final evaluation
-
-Official splits are preserved exactly; nothing is merged or moved.
-
-| dataset | raw split | standardized `split` | role |
-|---|---|---|---|
-| gsm8k | `train` | `train` | development / pilot pool |
-| gsm8k | `test` | `test` | final evaluation |
-| logiqa_v2 | `train` | `train` | development |
-| logiqa_v2 | `dev` | `validation` | development / pilot pool |
-| logiqa_v2 | `test` | `test` | final evaluation |
-
-LogiQA's `dev` split is renamed to the standardized name `validation` (the
-mapping is recorded in `data/manifests/sources.json` and
-`reports/data_validation.json`). No unofficial GSM8K validation split is
-created — pilot work uses GSM8K `train` and LogiQA `validation` only.
-
-## Pilot selection
-
-`data/manifests/pilot.json` is the single source of truth for the debugging /
-prompt-development pilot: 20 GSM8K `train` + 20 LogiQA `validation` examples
-at seed 42 (both configurable via `--pilot-size` / `--seed`).
-
-Procedure: for each dataset, `random.Random(seed).sample(sorted(example_ids),
-n)` — a fresh `Random` per dataset, so one dataset's selection never depends
-on the other's pool. The manifest stores example IDs only; underlying splits
-are unchanged. **Every later experimental condition must read its pilot
-questions from this manifest** so all conditions see identical items. The
-manifest intentionally contains no timestamp, so identical runs produce
-identical bytes. A final held-out test subset has deliberately *not* been
-selected yet.
-
-## Validation checks (reports/data_validation.json)
-
-- `raw_checksums` — raw files vs. `sources.json` SHA-256s
-- `input_schema` / `answer_schema` — required fields, types, and no
-  answer-field leakage into inputs
-- `unique_example_ids`
-- `input_answer_alignment` — one-to-one, same-order join
-- `logiqa_option_mapping` — options keyed A–D, index↔letter consistency,
-  `reference_reasoning` null
-- `gsm8k_answer_extraction` — all golds normalized numeric, delimiter present
-  in `source_answer`
-- `record_counts` — prepared counts equal parsed source counts
-- `duplicate_questions` — exact-duplicate report (GSM8K: question; LogiQA:
-  passage+question+options together), within and across splits. Reported,
-  never deleted.
-- `pilot_integrity` — pilot IDs belong only to non-test pools, correct sizes,
-  no duplicates
-- `deterministic_rerun` — previously written outputs byte-identical on rerun
-
-## Data sources, revisions, licensing
-
-| dataset | repository | pinned commit | files used | license |
-|---|---|---|---|---|
-| GSM8K | github.com/openai/grade-school-math | `3101c7d5072418e28b9008a6636bde82a006892c` | `grade_school_math/data/{train,test}.jsonl` | MIT |
-| LogiQA v2 (MRC) | github.com/csitfun/LogiQA2.0 | `955e1d3df6c59d9bfb44d9913da1e1a27ec14e18` | `logiqa/DATA/LOGIQA/{train,dev,test}.txt` | CC BY-NC-SA 4.0 |
-
-Exact raw URLs and per-file SHA-256 checksums: `data/manifests/sources.json`.
-The Chinese splits, the NLI (`QA2NLI`) variant, and the FOL/AMR annotation
-files of LogiQA2.0 are not used in this stage; LogiQA v1 is not used.
-
-Citations:
-
-```bibtex
-@article{cobbe2021gsm8k,
-  title={Training Verifiers to Solve Math Word Problems},
-  author={Cobbe, Karl and Kosaraju, Vineet and Bavarian, Mohammad and others},
-  journal={arXiv:2110.14168}, year={2021}
-}
-@ARTICLE{10174688,
-  author={Liu, Hanmeng and Liu, Jian and Cui, Leyang and Teng, Zhiyang and
-          Duan, Nan and Zhou, Ming and Zhang, Yue},
-  journal={IEEE/ACM Transactions on Audio, Speech, and Language Processing},
-  title={LogiQA 2.0—An Improved Dataset for Logical Reasoning in Natural
-         Language Understanding},
-  year={2023}, volume={31}, pages={2947--2962},
-  doi={10.1109/TASLP.2023.3293046}}
-```
-
-## Known caveats (from inspection of the source data)
-
-- **LogiQA `id` is not unique** within its splits (e.g. 12,229 unique IDs over
-  12,567 train records — colliding IDs belong to *different* questions), so
-  `source_id` alone cannot identify records; `example_id` is position-based
-  and always unique.
-- **LogiQA contains exact-duplicate items** — 1,349 duplicate groups
-  (1,359 extra copies), 443 of them spanning different official splits
-  (potential train/test leakage). They are enumerated in
-  `reports/data_validation.json` and kept unchanged per instructions;
-  downstream evaluation may want to account for them.
-- **A few option strings contain letter-like prefixes** that are genuine
-  content (`"A.I has become mature…"`, `"B. t. toxins…"`, literal `"A."`–`"D."`
-  options). They are preserved verbatim; labels exist only as `options` keys.
-- The raw `.txt` files have no trailing newline, so `wc -l` undercounts by
-  one; record counts come from JSON parsing.
-
----
-
-# Local generation, scoring, and the development baseline pilot
-
-Runs `mlx-community/Qwen2.5-7B-Instruct-4bit` locally under two development
-conditions — `answer_only` and `prose_reasoning` — over a test-disjoint
-pilot subset, then scores the `FINAL_ANSWER:` field. No training, cloud, or
-paid APIs. Development runs only; not final experimental results.
-
-## Test-disjoint pilot (`data/manifests/pilot_disjoint.json`)
-
-Part 1 reported exact-duplicate content inside LogiQA and across its
-official splits. `pilot_disjoint.json` derives from `pilot.json` and
-additionally guarantees that no selected example's content occurs in its
-dataset's official test split and no two selected examples duplicate each
-other. Matching uses passage + question + ordered options for LogiQA and
-the question string for GSM8K — never the non-unique upstream `source_id`.
-The original `pilot.json` is preserved unchanged.
-
-```bash
-python3 scripts/select_disjoint_pilot.py          # seed 42, 20 per dataset
-```
-
-Excluded IDs, the replacement procedure, and per-dataset counts are
-documented inside the manifest. For seed 42 all 40 original IDs happened
-to be eligible (30 LogiQA validation items outside the sample overlap
-test), so the selection equals the original pilot — this is recorded in
-the manifest, not assumed.
-
-## Generation environment (Apple silicon only)
-
-Keep these heavy deps out of the stdlib prep environment:
-
-```bash
-python3 -m venv .venv-mlx
-.venv-mlx/bin/pip install -r requirements-generation.txt
-```
-
-Model: `mlx-community/Qwen2.5-7B-Instruct-4bit`, pinned to revision
-`c26a38f6a37d0a51b4e9a1eb3026530fa35d9fed` in
-`configs/model_qwen2.5-7b-instruct-4bit.json`. Weights download once into
-the normal HuggingFace cache (`~/.cache/huggingface`, ~4.3 GB, not in
-Git); the exact pinned snapshot is loaded via `snapshot_download`.
-
-## Generating
-
-```bash
-.venv-mlx/bin/python scripts/run_generation.py \
-    --manifest data/manifests/pilot_disjoint.json \
-    --conditions answer_only prose_reasoning \
-    --output-dir outputs/pilot_baseline \
-    --max-new-tokens 1024
-```
-
-Options: `--limit-per-dataset N` (e.g. `2` for an 8-response smoke run),
-`--model-config`, `--prompts-dir`.
-
-- Greedy decoding explicitly (`make_sampler(temp=0.0)` → argmax); no
-  repetition penalty or other sampling changes.
-- Fresh conversation + fresh KV cache per (example, condition); model
-  loaded once per process; one question at a time.
-- Each completed response is appended to `responses.jsonl` immediately;
-  failures go to `failures.jsonl` and are retried on the next run.
-- **Resume**: rerun the same command. Completed (example, condition)
-  pairs are skipped. Resuming with a different model revision, prompt
-  template, chat template, manifest content, or `max_new_tokens` is
-  refused (mismatches are printed).
-- `run_config.json` records the pinned model, quantization config,
-  tokenizer/chat-template sha, Python/library versions, sampler spec, and
-  the meaning/unit of every memory field. `invocations.jsonl` logs
-  per-run model-download and load times separately from generation time.
-
-Prompts: `prompts/system.txt` (shared, neutral) + `prompts/<condition>.txt`
-rendered through the model's chat template (`$question_block` is identical
-across conditions — question, plus passage and `A.`-`D.` options for
-LogiQA). New conditions are added by dropping in a new template file. The
-exact rendered prompt is saved in every response record. Generation reads
-only `*.inputs.jsonl` — never answers or metadata.
-
-## Scoring
-
-```bash
-.venv-mlx/bin/python scripts/score_answers.py --run-dir outputs/pilot_baseline
-```
-
-Joins responses with `*.answers.jsonl` on `example_id`. Parses only the
-`FINAL_ANSWER:` line(s): GSM8K compares exact numeric values (Fraction;
-harmless `$`, commas, whitespace, one trailing period normalized), LogiQA
-compares the A–D letter (case/whitespace-insensitive). Missing, malformed,
-or ambiguous finals count as incorrect and stay in the denominator, as do
-generation failures. Reports per dataset × condition: strict accuracy,
-parse-status counts, generation failures, output-limit hits, and
-`answer_only` extra-text flags. Writes `<run-dir>/scores.json`.
-
-## Layout additions
-
-```
-configs/model_qwen2.5-7b-instruct-4bit.json   # pinned repo + revision
-prompts/{system,answer_only,prose_reasoning}.txt
-scripts/select_disjoint_pilot.py            # builds pilot_disjoint.json
-scripts/prompt_lib.py                       # question block + templates
-scripts/run_generation.py                   # resumable MLX-LM generation
-scripts/score_answers.py                    # FINAL_ANSWER scoring
-data/manifests/pilot_disjoint.json          # test-disjoint pilot IDs
-outputs/                                    # run dirs (gitignored)
-requirements-generation.txt                 # pinned MLX-LM env
-```
-
----
-
-# Poetic-constraint conditions, reasoning capture, and exports
-
-Eight independently selectable development conditions now exist as
-`prompts/<condition>.txt`: `line_breaks`, `rhyme_scheme`,
-`syllable_counts`, `alliteration`, `anaphora`, `epistrophe`,
-`couplets`, `stanza_structures`. They share the system message, question
-format, one-step-per-line instruction, and `REASONING:`/`FINAL_ANSWER:`
-contract; device rules constrain only the reasoning lines. Exact rules,
-within-line vs across-line scope, grouping requirements, the intended
-`line_breaks` comparison, known device overlaps, and open adherence-
-scoring decisions are in **`docs/conditions.md`**. These are versioned
-development specifications, not frozen final-study prompts. Poetic
-compliance is **not** validated or scored anywhere in this stage.
-
-## Previewing prompts (no model)
-
-`--dry-run` renders the selected prompts and the planned response count,
-then exits before any model import/download — nothing is written.
-`--limit-per-dataset N` takes the first N manifest IDs per dataset, so
-every condition sees the same examples.
-
-```bash
-# 2 questions/dataset x 2 conditions = 8 planned responses
-.venv-mlx/bin/python scripts/run_generation.py --dry-run \
-    --manifest data/manifests/pilot_disjoint.json \
-    --conditions line_breaks rhyme_scheme \
-    --output-dir outputs/poetic_smoke --limit-per-dataset 2
-```
-
-## Generating (loads the model, writes responses)
-
-Same command minus `--dry-run`. The dev manifest has 20 GSM8K + 20
-LogiQA examples — the 2-per-dataset run plans **8 responses**, the full
-eight-condition pilot plans **320** (40 × 8). Use a separate `--output-dir`
-per configuration; resume and mismatch safeguards are unchanged.
-
-```bash
-.venv-mlx/bin/python scripts/run_generation.py \
-    --manifest data/manifests/pilot_disjoint.json \
-    --conditions line_breaks rhyme_scheme \
-    --output-dir outputs/poetic_smoke --limit-per-dataset 2 \
-    --max-new-tokens 1024
-
-# after inspecting the smoke run, the full pilot:
-.venv-mlx/bin/python scripts/run_generation.py \
-    --manifest data/manifests/pilot_disjoint.json \
-    --conditions line_breaks rhyme_scheme syllable_counts alliteration \
-        anaphora epistrophe couplets stanza_structures \
-    --output-dir outputs/poetic_pilot --max-new-tokens 1024
-```
-
-## What each response record contains (`responses.jsonl`, canonical)
-
-`example_id`, `dataset`, `condition`, `run_id`, `model` (repo, exact
-revision, quantization), `prompt`, **`raw_response`** (unchanged),
-**`reasoning_text`** (literal text between `REASONING:` and the first
-`FINAL_ANSWER:` marker — whitespace preserved, never normalized),
-**`reasoning_parse_status`** (`extracted` / `partial_missing_final_answer`
-/ `missing_reasoning_marker` / `ambiguous_markers` / `not_applicable` for
-`answer_only`), `final_answer_text` + `final_answer_values`,
-`prompt_tokens`, `generated_tokens`, `elapsed_seconds`, `finish_reason`,
-`hit_output_limit` (truncated outputs are retained and flagged, never
-retried or extended), `memory`, `recorded_at`. Failures stay in
-`failures.jsonl`. These fields capture only the model's *visible* output.
-
-Backfill existing runs (e.g. `outputs/pilot_baseline`) without touching
-their originals — writes a new derived file:
-
-```bash
-.venv-mlx/bin/python scripts/extract_reasoning.py \
-    --run-dir outputs/pilot_baseline
-# -> outputs/pilot_baseline/responses.with_reasoning.jsonl
-```
-
-## Readable exports
-
-```bash
-.venv-mlx/bin/python scripts/export_responses.py \
-    --run-dir outputs/pilot_baseline --export-root exports
-# -> exports/<run_id>/<dataset>/<condition>/<model>__<dataset>__<condition>__<example_id>.txt
-```
-
-One UTF-8 `.txt` per response: example ID, dataset, condition, run, model
-reference, finish info, the question as shown to the model, and the
-complete raw response. Filenames embed model/dataset/condition/ID so they
-cannot collide. `exports/` is gitignored like `outputs/`.
-
-## Scoring
-
-Unchanged — strict `FINAL_ANSWER:` scoring on either record schema:
-
-```bash
-.venv-mlx/bin/python scripts/score_answers.py --run-dir outputs/poetic_smoke
+configs/            # model configs, budget.json, device_selection.json
+prompts/            # system.txt + one template per condition
+scripts/            # all pipeline commands (stdlib unless noted)
+data/manifests/     # pilot.json, pilot_disjoint.json, screening4.json, sources.json
+data/processed/     # standardized inputs/answers (gitignored)
+outputs/            # run dirs + openai_ledger.jsonl (gitignored)
+exports/, reviews/  # readable exports, manual review packs (gitignored)
+docs/               # methodology and stage detail
+tests/              # hardware-independent tests
 ```

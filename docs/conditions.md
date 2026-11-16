@@ -2,7 +2,21 @@
 
 Status: **versioned development specifications, not frozen final-study
 prompts.** Each condition lives in `prompts/<condition>.txt` and is
-independently selectable via `--conditions`. All eight share the same
+independently selectable via `--conditions`.
+
+> **Stage-2 update:** the screening set is the **eight poetic devices**
+> `rhyme_scheme`, `syllable_counts`, `alliteration`, `anaphora`,
+> `epistrophe`, `meter`, `couplets`, `stanza_structures`
+> (`scripts/study_defs.py: POETIC_DEVICES`). `line_breaks` is retained
+> as the line-structure *control* alongside `answer_only` and
+> `prose_reasoning` — it is not counted as a poetic device. `meter`
+> (restored for the screening round) is the older terse template: it
+> predates the shared "Do not enumerate / concise lines / labels stay
+> plain" scaffolding below, so it is not identical in scaffolding to the
+> other seven device prompts. All device rules constrain only the
+> reasoning lines.
+
+The seven newer device prompts plus `line_breaks` share the same
 scaffolding as `prose_reasoning`:
 
 - identical `$question_block` (question, plus passage and `A.`–`D.` options
@@ -19,7 +33,7 @@ scaffolding as `prose_reasoning`:
 - reasoning is generated **directly** in the constrained form — there is
   no prose-then-rewrite step, and no few-shot examples.
 
-## The eight conditions
+## The line-structured conditions (8 poetic devices + `line_breaks` control)
 
 | condition | exact rule (device constraint on each reasoning line) | scope |
 |---|---|---|
@@ -29,6 +43,7 @@ scaffolding as `prose_reasoning`:
 | `alliteration` | ≥3 words per line starting with the same consonant letter | within a line |
 | `anaphora` | every line begins with the fixed phrase "We know " | within lines, consistent across all lines |
 | `epistrophe` | every line ends with the fixed phrase "as we see" | within lines, consistent across all lines |
+| `meter` | iambic unstressed-stressed syllable pattern on each reasoning line ("a iambic pentameter pattern" — wording preserved verbatim from the saved template) | within a line |
 | `couplets` | reasoning steps paired with a follow-up step; complete pairs; two blank lines separate pairs | across lines within a pair |
 | `stanza_structures` | lines grouped into complete four-line stanzas; two blank lines separate stanzas | across lines, structural only |
 
@@ -81,9 +96,12 @@ message, output contract, and decoding settings.
 - `anaphora`/`epistrophe` mirror each other and use fixed phrases
   ("We know " / "as we see") rather than model-chosen ones; `epistrophe`'s
   repeated end phrase trivially satisfies the pair-rhyme sound rule.
-- `meter` was removed as a condition after smoke runs — iambic stress
-  patterns proved too ambiguous to specify and score reliably at this
-  stage.
+- `meter` overlaps `syllable_counts` (both constrain per-line length/
+  rhythm) but adds a stress pattern. It was briefly removed after smoke
+  runs because iambic stress is ambiguous to specify and score, then
+  restored for the screening round so adherence can be judged manually
+  — that ambiguity is itself a documented limitation, not silently
+  resolved.
 - `alliteration` is independent of the others and could co-occur with any.
 
 ## Open decisions for automatic adherence scoring (not yet implemented)
