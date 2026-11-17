@@ -1,0 +1,11 @@
+ANAPHORA operational rubric (v1)
+
+Rule: every reasoning line begins with the exact phrase "We know " (the supplied phrase includes a trailing space).
+
+- Applicable units: every non-blank line inside the reasoning text. Whitespace-only lines are skipped. Lines that look like headings or labels still count as reasoning lines.
+- Case: the match is case-sensitive. "we know" or "WE KNOW" does not count.
+- Boundary: after optional leading whitespace, the line must start with "We know" on a word boundary. "We known..." fails.
+- Phrase-only lines: a line containing ONLY the phrase ("We know", "We know.", "We know,") carries no reasoning content: FAIL that line. The reasoning must say something after the phrase.
+- Punctuation/whitespace: leading indentation is ignored; trailing content after the phrase is unrestricted.
+- Empty reasoning: no pass. Zero applicable lines = not_evaluable.
+- Whole-response verdict: pass iff every applicable line complies.

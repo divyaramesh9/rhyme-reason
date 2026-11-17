@@ -1,0 +1,80 @@
+{
+  "name": "dev_pilot",
+  "stage": "development",
+  "purpose": "Matched development pilot: identical questions across every model and condition; disjoint from screening/prompt-development items and from the official test split (content-level).",
+  "seed": 20261116,
+  "questions_per_dataset": 8,
+  "config": "configs/dev_pilot.json",
+  "matching_rule": "gsm8k: exact question string; logiqa_v2: (context, question, option texts in A,B,C,D label order). The non-unique upstream source_id is never used.",
+  "selection_procedure": "Exclude IDs already used in saved runs or earlier manifests, then items whose content key occurs in the test split, then content duplicates; draw random.Random(seed).sample over the sorted eligible IDs.",
+  "exclusion_sources": {
+    "outputs/controls_gpt4o/responses.jsonl": 4,
+    "outputs/controls_llama/responses.jsonl": 4,
+    "outputs/controls_qwen/responses.jsonl": 4,
+    "outputs/pilot_baseline/responses.jsonl": 40,
+    "outputs/poetic_smoke/responses.jsonl": 4,
+    "outputs/poetic_smoke_all9/responses.jsonl": 4,
+    "outputs/poetic_smoke_rhyme_v2/responses.jsonl": 4,
+    "outputs/poetic_smoke_v3/responses.jsonl": 4,
+    "outputs/screening_gpt4o/responses.jsonl": 4,
+    "outputs/screening_llama/responses.jsonl": 4,
+    "outputs/screening_qwen/responses.jsonl": 4,
+    "data/manifests/pilot.json": 40,
+    "data/manifests/pilot_disjoint.json": 40,
+    "data/manifests/screening4.json": 4
+  },
+  "conditions": [
+    "answer_only",
+    "prose_reasoning",
+    "line_breaks",
+    "anaphora",
+    "epistrophe",
+    "alliteration",
+    "rhyme_scheme",
+    "meter"
+  ],
+  "models": [
+    "configs/model_qwen2.5-7b-instruct-4bit.json",
+    "configs/model_llama-3.1-8b-instruct-4bit.json",
+    "configs/model_gpt-4o-2024-08-06.json"
+  ],
+  "pools": {
+    "gsm8k": {
+      "split": "train",
+      "pool_size": 7473,
+      "excluded_used_in_development": 20,
+      "excluded_content_in_test_split": 0,
+      "eligible_count": 7453,
+      "example_ids": [
+        "gsm8k-train-01731",
+        "gsm8k-train-01760",
+        "gsm8k-train-02774",
+        "gsm8k-train-03324",
+        "gsm8k-train-04142",
+        "gsm8k-train-05219",
+        "gsm8k-train-05315",
+        "gsm8k-train-07038"
+      ],
+      "selected_count": 8
+    },
+    "logiqa_v2": {
+      "split": "validation",
+      "pool_size": 1569,
+      "excluded_used_in_development": 20,
+      "excluded_content_in_test_split": 30,
+      "eligible_count": 1506,
+      "example_ids": [
+        "logiqa_v2-validation-00448",
+        "logiqa_v2-validation-00456",
+        "logiqa_v2-validation-00687",
+        "logiqa_v2-validation-00719",
+        "logiqa_v2-validation-00858",
+        "logiqa_v2-validation-01070",
+        "logiqa_v2-validation-01351",
+        "logiqa_v2-validation-01378"
+      ],
+      "selected_count": 8
+    }
+  },
+  "problems": []
+}

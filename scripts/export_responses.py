@@ -26,26 +26,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
+import common
 import prompt_lib
 import response_parsing as rp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
-
-
-def safe_tag(text: str) -> str:
-    """Filesystem-safe tag: letters/digits/dots/dashes/underscores."""
-    return re.sub(r"[^A-Za-z0-9._-]+", "-", text).strip("-")
-
-
-def model_tag(model: dict | None, compat: dict) -> str:
-    repo = (model or {}).get("repo") or compat.get("model_repo") or "model"
-    rev = (model or {}).get("revision") or compat.get("model_revision") or ""
-    return safe_tag(f"{repo.split('/')[-1]}-{rev[:8]}" if rev else repo)
 
 
 def load_questions(run_dir: Path, processed_dir: Path) -> dict:
@@ -59,12 +48,7 @@ def load_questions(run_dir: Path, processed_dir: Path) -> dict:
     questions = {}
     for dataset, pool in manifest["pools"].items():
         inputs = processed_dir / f"{dataset}_{pool['split']}.inputs.jsonl"
-        by_id = {}
-        with open(inputs, encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    r = json.loads(line)
-                    by_id[r["example_id"]] = r
+        by_id = {r["example_id"]: r for r in common.read_jsonl(inputs)}
         for eid in pool["example_ids"]:
             if eid in by_id:
                 questions[eid] = prompt_lib.question_block(by_id[eid])
@@ -83,7 +67,7 @@ def render_txt(rec: dict, question: str | None,
     if rps is None:
         # Older records predate this field; compute it for display.
         rps = rp.extract_reasoning_fields(
-            raw, rec.get("condition") != "answer_only"
+            raw, prompt_lib.expects_reasoning(rec["condition"])
         )["reasoning_parse_status"] + " (derived)"
     parts = [
         f"example_id: {rec.get('example_id')}",
@@ -129,30 +113,26 @@ def main() -> int:
         "revision": compat.get("model_revision"),
         "quantization": env_model.get("quantization"),
     }
-    tag = model_tag(model, compat)
+    tag = common.model_tag(model, compat)
     questions = load_questions(args.run_dir, args.processed_dir)
 
     n = 0
-    with open(src, encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            rec = json.loads(line)
-            rec_model = rec.get("model") or model
-            fname = (
-                f"{tag}__{safe_tag(rec['dataset'])}__"
-                f"{safe_tag(rec['condition'])}__"
-                f"{safe_tag(rec['example_id'])}.txt"
-            )
-            dest = (args.export_root / run_id / rec["dataset"]
-                    / rec["condition"] / fname)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_text(
-                render_txt(rec, questions.get(rec["example_id"]),
-                           rec_model, compat, run_id),
-                encoding="utf-8",
-            )
-            n += 1
+    for rec in common.read_jsonl(src):
+        rec_model = rec.get("model") or model
+        fname = (
+            f"{tag}__{common.safe_tag(rec['dataset'])}__"
+            f"{common.safe_tag(rec['condition'])}__"
+            f"{common.safe_tag(rec['example_id'])}.txt"
+        )
+        dest = (args.export_root / run_id / rec["dataset"]
+                / rec["condition"] / fname)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(
+            render_txt(rec, questions.get(rec["example_id"]),
+                       rec_model, compat, run_id),
+            encoding="utf-8",
+        )
+        n += 1
     print(f"exported {n} response file(s) -> "
           f"{args.export_root / run_id}")
     return 0

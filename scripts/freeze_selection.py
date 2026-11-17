@@ -26,22 +26,17 @@ threshold: the retained set is exactly what you recorded.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
+import common
 import study_defs
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTION_PATH = REPO_ROOT / "configs" / "device_selection.json"
 FROZEN_PATH = REPO_ROOT / "configs" / "device_selection.frozen.json"
 PROMPTS_DIR = REPO_ROOT / "prompts"
-
-
-def sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def load_selection(path: Path = SELECTION_PATH) -> dict:
@@ -87,14 +82,14 @@ def freeze(selection_path: Path, frozen_path: Path,
               "loosened automatically.", file=sys.stderr)
         return 1
 
-    prompt_shas = {"system": sha256_file(PROMPTS_DIR / "system.txt")}
+    prompt_shas = {"system": common.sha256_file(PROMPTS_DIR / "system.txt")}
     for name in study_defs.POETIC_DEVICES + study_defs.CONTROLS:
-        prompt_shas[name] = sha256_file(PROMPTS_DIR / f"{name}.txt")
+        prompt_shas[name] = common.sha256_file(PROMPTS_DIR / f"{name}.txt")
 
     frozen = {
-        "frozen_at": datetime.now(timezone.utc).isoformat(),
+        "frozen_at": common.utc_now(),
         "selection_file": str(selection_path),
-        "selection_file_sha256": sha256_file(selection_path),
+        "selection_file_sha256": common.sha256_file(selection_path),
         "retained_devices": retained,
         "excluded_devices": excluded,
         "final_conditions": study_defs.CONTROLS + retained,
@@ -136,14 +131,14 @@ def verify(frozen_path: Path) -> int:
         if not p.exists():
             problems.append(f"prompt file {p} missing")
             continue
-        cur = sha256_file(p)
+        cur = common.sha256_file(p)
         if cur != sha:
             problems.append(
                 f"prompt {name!r} changed since freeze "
                 f"({sha[:12]}... -> {cur[:12]}...)")
     sel_path = Path(frozen["selection_file"])
     if sel_path.exists() and \
-            sha256_file(sel_path) != frozen["selection_file_sha256"]:
+            common.sha256_file(sel_path) != frozen["selection_file_sha256"]:
         problems.append(
             f"selection file {sel_path} changed since freeze; "
             "re-freeze if the change is intended")

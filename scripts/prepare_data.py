@@ -26,14 +26,14 @@ Standard library only.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import random
 import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
 from pathlib import Path
+
+import common
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RAW_DIR = REPO_ROOT / "data" / "raw"
@@ -109,18 +109,6 @@ NUMERIC_FINAL_RE = re.compile(r"^-?\d+(\.\d+)?$")
 
 class MalformedRecordError(ValueError):
     """Raised when a source record cannot be standardized safely."""
-
-
-def sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def make_example_id(dataset: str, std_split: str, position: int) -> str:
@@ -350,7 +338,7 @@ def download_raw() -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
 
         if dest.exists():
-            digest = sha256_file(dest)
+            digest = common.sha256_file(dest)
             if rel in known and known[rel] != digest:
                 raise SystemExit(
                     f"error: {rel} exists but sha256 {digest} does not match "
@@ -362,7 +350,7 @@ def download_raw() -> None:
             print(f"  fetching {spec['url']}")
             with urllib.request.urlopen(spec["url"]) as resp:
                 dest.write_bytes(resp.read())
-            digest = sha256_file(dest)
+            digest = common.sha256_file(dest)
             if rel in known and known[rel] != digest:
                 dest.unlink()
                 raise SystemExit(
@@ -386,7 +374,7 @@ def download_raw() -> None:
                 "local_path": rel,
                 "sha256": digest,
                 "bytes": dest.stat().st_size,
-                "downloaded_at": datetime.now(timezone.utc).isoformat(),
+                "downloaded_at": common.utc_now(),
             }
         )
 
@@ -412,7 +400,7 @@ def verify_raw_checksums() -> dict:
             ok = False
             details.append({"file": rel, "status": "missing"})
             continue
-        digest = sha256_file(path)
+        digest = common.sha256_file(path)
         if rel in expected:
             match = digest == expected[rel]
             ok &= match
@@ -684,7 +672,7 @@ def prepare(seed: int, pilot_size: int) -> int:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     report: dict = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": common.utc_now(),
         "seed": seed,
         "pilot_size": pilot_size,
         "split_mapping": {

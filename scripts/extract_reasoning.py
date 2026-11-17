@@ -22,13 +22,10 @@ import json
 import sys
 from pathlib import Path
 
+import prompt_lib
 import response_parsing as rp
 
 DERIVED_FILE = "responses.with_reasoning.jsonl"
-
-
-def expects_reasoning_for(condition: str) -> bool:
-    return condition != "answer_only"
 
 
 def main() -> int:
@@ -60,6 +57,7 @@ def main() -> int:
         run_id = cfg.get("run_name", run_id)
 
     out_path = args.out or args.run_dir / DERIVED_FILE
+    templates = prompt_lib.load_templates()
     n = 0
     status_counts: dict[str, int] = {}
     with open(src, encoding="utf-8") as f, \
@@ -70,7 +68,7 @@ def main() -> int:
             rec = json.loads(line)
             parsed = rp.extract_reasoning_fields(
                 rp.record_raw_text(rec),
-                expects_reasoning_for(rec["condition"]),
+                prompt_lib.expects_reasoning(rec["condition"], templates),
             )
             rec.setdefault("run_id", run_id)
             rec.setdefault("model", model_meta)

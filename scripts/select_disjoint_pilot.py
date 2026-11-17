@@ -42,6 +42,8 @@ import random
 import sys
 from pathlib import Path
 
+import common
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
 MANIFEST_DIR = REPO_ROOT / "data" / "manifests"
@@ -60,18 +62,6 @@ MATCHING_RULE = (
     "texts in A,B,C,D label order). The non-unique upstream source_id is "
     "never used."
 )
-
-
-def load_jsonl(path: Path) -> list[dict]:
-    # Iterate file lines (LF only) like prepare_data.read_jsonl: question
-    # text may contain Unicode separators (e.g. U+2028) that splitlines()
-    # would wrongly treat as record boundaries.
-    records = []
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                records.append(json.loads(line))
-    return records
 
 
 def content_key(record: dict) -> tuple:
@@ -162,11 +152,11 @@ def build_disjoint_pilot(
         spec = POOLS[dataset]
         pool = {
             r["example_id"]: r
-            for r in load_jsonl(split_path(dataset, spec["pool_split"]))
+            for r in common.read_jsonl(split_path(dataset, spec["pool_split"]))
         }
         test_keys = {
             content_key(r)
-            for r in load_jsonl(split_path(dataset, spec["test_split"]))
+            for r in common.read_jsonl(split_path(dataset, spec["test_split"]))
         }
         original_ids = original_pilot["pools"][dataset]["example_ids"]
         sel = select_disjoint_ids(pool, test_keys, original_ids, n, seed)

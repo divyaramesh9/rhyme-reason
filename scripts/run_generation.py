@@ -32,15 +32,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 import backends
 import budget as budget_mod
+import common
 import prompt_lib
 import response_parsing as rp
 import study_defs
@@ -89,39 +88,6 @@ MEMORY_FIELD_DOC = {
 IMPLIED_COMPAT_DEFAULTS = {"backend": "mlx_local"}
 
 
-def sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def append_jsonl(path: Path, record: dict) -> None:
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        f.flush()
-
-
-def read_jsonl(path: Path) -> list[dict]:
-    records = []
-    if not path.exists():
-        return records
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                records.append(json.loads(line))
-    return records
-
-
 # --------------------------------------------------------------------------
 # Work items
 # --------------------------------------------------------------------------
@@ -140,7 +106,7 @@ def load_manifest_examples(manifest_path: Path,
     for dataset, pool in manifest["pools"].items():
         split = pool["split"]
         inputs_path = processed_dir / f"{dataset}_{split}.inputs.jsonl"
-        by_id = {r["example_id"]: r for r in read_jsonl(inputs_path)}
+        by_id = {r["example_id"]: r for r in common.read_jsonl(inputs_path)}
         ids = pool["example_ids"]
         if limit_per_dataset is not None:
             ids = ids[:limit_per_dataset]
@@ -172,11 +138,11 @@ def build_compatibility(model_cfg: dict, manifest_path: Path,
         "model_repo": ident["repo"],
         "model_revision": ident["revision"],
         "manifest_path": manifest_display,
-        "manifest_sha256": sha256_file(manifest_path),
+        "manifest_sha256": common.sha256_file(manifest_path),
         "prompt_template_sha256": {
-            "system": sha256_file(prompt_dir / "system.txt"),
+            "system": common.sha256_file(prompt_dir / "system.txt"),
             **{
-                c: sha256_file(prompt_dir / f"{c}.txt")
+                c: common.sha256_file(prompt_dir / f"{c}.txt")
                 for c in conditions
             },
         },
@@ -218,12 +184,6 @@ def check_resume_compat(stored: dict, current: dict) -> list[str]:
 # Generation
 # --------------------------------------------------------------------------
 
-def expects_reasoning(condition: str, templates: dict) -> bool:
-    """A condition expects a REASONING: section iff its template asks for
-    one (the answer_only template does not)."""
-    return "REASONING:" in templates["conditions"][condition].template
-
-
 def dry_run_report(examples: list[dict], conditions: list[str],
                    templates: dict, model_cfg: dict,
                    manifest_path: Path, done: set,
@@ -233,7 +193,7 @@ def dry_run_report(examples: list[dict], conditions: list[str],
     lines = [
         "DRY RUN -- no model loaded or downloaded; nothing written.",
         f"stage: {stage}",
-        f"manifest: {manifest_path} (sha256 {sha256_file(manifest_path)[:12]}...)",
+        f"manifest: {manifest_path} (sha256 {common.sha256_file(manifest_path)[:12]}...)",
         f"backend: {ident['backend']}",
         f"model (not loaded): {ident['repo']}@{ident['revision']}",
         f"system message: {templates['system'].strip()!r}",
@@ -279,14 +239,14 @@ def dry_run_report(examples: list[dict], conditions: list[str],
 
 def record_failure(path: Path, rec: dict, cond: str, exc: BaseException,
                    extra: dict | None = None) -> None:
-    append_jsonl(path, {
+    common.append_jsonl(path, {
         "example_id": rec["example_id"],
         "dataset": rec["dataset"],
         "condition": cond,
         "error_type": type(exc).__name__,
         "error": str(exc),
         **(extra or {}),
-        "recorded_at": utc_now(),
+        "recorded_at": common.utc_now(),
     })
 
 
@@ -346,7 +306,7 @@ def main() -> int:
 
     # Completed (example_id, condition) pairs already on disk -> skip.
     done = {
-        (r["example_id"], r["condition"]) for r in read_jsonl(responses_path)
+        (r["example_id"], r["condition"]) for r in common.read_jsonl(responses_path)
     }
 
     # ---- dry run: render and exit before any model/provider import ----
@@ -386,7 +346,7 @@ def main() -> int:
         config = {
             "run_name": out_dir.name,
             "stage": stage,
-            "created_at": utc_now(),
+            "created_at": common.utc_now(),
             "compatibility": compat,
             "environment": backend.environment_info(MEMORY_FIELD_DOC),
         }
@@ -424,7 +384,7 @@ def main() -> int:
               f"${st['open_reserved_usd']:.4f})")
 
     invocation = {
-        "started_at": utc_now(),
+        "started_at": common.utc_now(),
         "stage": stage,
         "backend": ident["backend"],
         "resumed": resumed,
@@ -496,7 +456,8 @@ def main() -> int:
                 result["provider"]["cost_usd"] = cost
 
             parsed = rp.extract_reasoning_fields(
-                result["raw_response"], expects_reasoning(cond, templates))
+                result["raw_response"],
+                prompt_lib.expects_reasoning(cond, templates))
             record = {
                 "example_id": eid,
                 "dataset": rec["dataset"],
@@ -507,9 +468,9 @@ def main() -> int:
                 "messages": messages,
                 **result,
                 **parsed,
-                "recorded_at": utc_now(),
+                "recorded_at": common.utc_now(),
             }
-            append_jsonl(responses_path, record)
+            common.append_jsonl(responses_path, record)
             n_done += 1
             print(
                 f"  [{i}/{len(work)}] {eid} {cond}: "
@@ -522,10 +483,10 @@ def main() -> int:
               "rerun the same command to resume")
 
     invocation.update(
-        finished_at=utc_now(), completed=n_done, failed=n_fail,
+        finished_at=common.utc_now(), completed=n_done, failed=n_fail,
         budget_stopped=budget_stop,
     )
-    append_jsonl(out_dir / INVOCATIONS_FILE, invocation)
+    common.append_jsonl(out_dir / INVOCATIONS_FILE, invocation)
     print(f"done: {n_done} completed, {n_fail} failed -> {out_dir}")
     if budget_stop:
         return 3

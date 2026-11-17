@@ -93,6 +93,22 @@ def build_user_message(record: dict, condition: str, templates: dict) -> str:
     )
 
 
+def expects_reasoning(condition: str,
+                      templates: dict | None = None,
+                      prompt_dir: Path = PROMPT_DIR) -> bool:
+    """A condition expects a REASONING: section iff its template asks for
+    one (the answer_only template does not).
+
+    Pass already-loaded ``templates`` in the generation hot path; otherwise
+    the single template file is read from ``prompt_dir``.
+    """
+    if templates is not None:
+        text = templates["conditions"][condition].template
+    else:
+        text = (prompt_dir / f"{condition}.txt").read_text(encoding="utf-8")
+    return "REASONING:" in text
+
+
 def build_messages(record: dict, condition: str, templates: dict) -> list[dict]:
     """Fresh conversation: shared system message + condition user message."""
     return [

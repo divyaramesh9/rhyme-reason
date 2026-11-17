@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+import common
 import prompt_lib
 import run_generation as rg
 import score_answers as sa
@@ -393,8 +394,8 @@ def test_poetic_prompts_no_answer_leakage():
 def test_poetic_conditions_expect_reasoning():
     t = templates()
     for cond in POETIC_CONDITIONS + ["prose_reasoning"]:
-        assert rg.expects_reasoning(cond, t)
-    assert not rg.expects_reasoning("answer_only", t)
+        assert prompt_lib.expects_reasoning(cond, t)
+    assert not prompt_lib.expects_reasoning("answer_only", t)
 
 
 # --------------------------------------------------------------------------
@@ -458,9 +459,9 @@ def test_disjoint_manifest_real_data():
     manifest = json.loads(
         (REPO_ROOT / "data/manifests/pilot_disjoint.json").read_text())
     for dataset, pool in manifest["pools"].items():
-        inputs = sdp.load_jsonl(
+        inputs = common.read_jsonl(
             sdp.split_path(dataset, pool["split"]))
-        tests = sdp.load_jsonl(sdp.split_path(dataset, "test"))
+        tests = common.read_jsonl(sdp.split_path(dataset, "test"))
         test_keys = {sdp.content_key(r) for r in tests}
         by_id = {r["example_id"]: r for r in inputs}
         keys = []

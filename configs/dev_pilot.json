@@ -1,0 +1,32 @@
+{
+  "name": "dev_pilot",
+  "description": "Matched development pilot for the midterm report. questions_per_dataset x datasets x (devices + controls) x models. All counts are DERIVED by scripts/build_dev_pilot.py --check; never edit counts by hand.",
+  "questions_per_dataset": 8,
+  "datasets": ["gsm8k", "logiqa_v2"],
+  "seed": 20261116,
+  "seed_note": "Selection seed for the pilot manifest. Distinct from the 42 used by pilot/pilot_disjoint/screening4 so the pilot sample is a fresh deterministic draw, not a prefix of earlier pools.",
+  "models": [
+    "configs/model_qwen2.5-7b-instruct-4bit.json",
+    "configs/model_llama-3.1-8b-instruct-4bit.json",
+    "configs/model_gpt-4o-2024-08-06.json"
+  ],
+  "devices": ["anaphora", "epistrophe", "alliteration", "rhyme_scheme", "meter"],
+  "devices_source": "Must equal configs/device_selection.frozen.json retained_devices (verified by build_dev_pilot.py; mismatches are reported, never auto-fixed).",
+  "controls": ["answer_only", "prose_reasoning", "line_breaks"],
+  "manifest": "data/manifests/dev_pilot.json",
+  "exclusions": {
+    "policy": "Exclude every example_id already used by any saved generation run under outputs/ (screening, controls, smoke runs, pilot_baseline) plus every ID named in earlier manifests (pilot.json, pilot_disjoint.json, screening4.json) -- i.e. anything used in screening or prompt development. Selection then draws from the full development pool (gsm8k train, logiqa_v2 validation), excluding items whose content occurs in the official test split and within-sample content duplicates.",
+    "sources": ["outputs/*/responses.jsonl", "outputs/*/failures.jsonl", "data/manifests/pilot.json", "data/manifests/pilot_disjoint.json", "data/manifests/screening4.json"]
+  },
+  "generation": {
+    "stage": "development",
+    "max_new_tokens": 1024,
+    "notes": "Zero-shot, directly constrained generation. Identical questions across every model and condition. No demonstrations, output repair, or retries. Gold answers never enter prompts."
+  },
+  "expected_counts_at_8_per_dataset": {
+    "total_questions": 16,
+    "generation_responses": 384,
+    "poetic_responses_for_adherence_eval": 240,
+    "control_responses": 144
+  }
+}

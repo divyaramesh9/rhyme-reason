@@ -20,10 +20,10 @@ import argparse
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from fractions import Fraction
 from pathlib import Path
 
+import common
 import response_parsing as rp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -145,20 +145,8 @@ def score_run(run_dir: Path) -> dict:
         for c in conditions
     }
 
-    def _load(name):
-        # Iterate file lines (LF only): response text may contain Unicode
-        # line separators that splitlines() would wrongly split on.
-        path = run_dir / name
-        records = []
-        if path.exists():
-            with open(path, encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
-                        records.append(json.loads(line))
-        return records
-
-    responses = _load("responses.jsonl")
-    failures = _load("failures.jsonl")
+    responses = common.read_jsonl(run_dir / "responses.jsonl")
+    failures = common.read_jsonl(run_dir / "failures.jsonl")
 
     # One scored record per (example_id, condition) response; later
     # duplicate rows (shouldn't happen) are scored individually and counted.
@@ -230,7 +218,7 @@ def score_run(run_dir: Path) -> dict:
 
     return {
         "run_dir": str(run_dir),
-        "scored_at": datetime.now(timezone.utc).isoformat(),
+        "scored_at": common.utc_now(),
         "conditions": conditions,
         "manifest": compat["manifest_path"],
         "expected_pairs": len(expected),

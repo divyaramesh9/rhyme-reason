@@ -20,6 +20,7 @@ import pytest
 import backends
 import budget as budget_mod
 import build_eval_manifest as bem
+import common
 import export_responses as ex
 import freeze_selection as fs
 import import_review as ir
@@ -97,8 +98,8 @@ def test_couplet_blank_line_preserved_end_to_end(tmp_path):
     rec = {"example_id": "e1", "dataset": "gsm8k", "condition": "couplets",
            "run_id": "r", "raw_response": COUPLET_RAW, **f}
     p = tmp_path / "responses.jsonl"
-    rg.append_jsonl(p, rec)
-    back = rg.read_jsonl(p)[0]
+    common.append_jsonl(p, rec)
+    back = common.read_jsonl(p)[0]
     assert back["raw_response"] == COUPLET_RAW
     assert back["reasoning_text"] == f["reasoning_text"]
 
@@ -113,8 +114,8 @@ def test_stanza_double_blank_and_crlf_preserved(tmp_path):
            "condition": "stanza_structures", "raw_response": STANZA_RAW,
            **f}
     p = tmp_path / "r.jsonl"
-    rg.append_jsonl(p, rec)
-    back = rg.read_jsonl(p)[0]
+    common.append_jsonl(p, rec)
+    back = common.read_jsonl(p)[0]
     assert back["raw_response"] == STANZA_RAW
 
 
@@ -155,7 +156,7 @@ def test_export_raw_section_roundtrip(tmp_path):
         json.dumps(rec) + "\n")
     export_root = tmp_path / "exports"
     dest = (export_root / "runx" / "gsm8k" / "couplets"
-            / f"{ex.model_tag(rec['model'], {})}__gsm8k__couplets__"
+            / f"{common.model_tag(rec['model'], {})}__gsm8k__couplets__"
               "gsm8k-train-00001.txt")
     dest.parent.mkdir(parents=True)
     dest.write_text(ex.render_txt(rec, "q", rec["model"], {}, "runx"),
@@ -214,9 +215,9 @@ def test_screening4_ids_exist_and_are_test_disjoint():
     s4 = json.loads((REPO_ROOT / "data/manifests/screening4.json")
                     .read_text())
     for ds, pool in s4["pools"].items():
-        inputs = {r["example_id"]: r for r in sdp.load_jsonl(
+        inputs = {r["example_id"]: r for r in common.read_jsonl(
             sdp.split_path(ds, pool["split"]))}
-        test_keys = {sdp.content_key(r) for r in sdp.load_jsonl(
+        test_keys = {sdp.content_key(r) for r in common.read_jsonl(
             sdp.split_path(ds, "test"))}
         for eid in pool["example_ids"]:
             assert sdp.content_key(inputs[eid]) not in test_keys
@@ -681,9 +682,9 @@ def test_export_filenames_distinct_across_models():
                        "revision": "aaaa1111"}}
     rec_b = dict(rec_a, model={"repo": "openai",
                                "revision": "gpt-4o-2024-08-06"})
-    fa = f"{ex.model_tag(rec_a['model'], {})}__{rec_a['dataset']}__" \
+    fa = f"{common.model_tag(rec_a['model'], {})}__{rec_a['dataset']}__" \
          f"{rec_a['condition']}__{rec_a['example_id']}.txt"
-    fb = f"{ex.model_tag(rec_b['model'], {})}__{rec_b['dataset']}__" \
+    fb = f"{common.model_tag(rec_b['model'], {})}__{rec_b['dataset']}__" \
          f"{rec_b['condition']}__{rec_b['example_id']}.txt"
     assert fa != fb
 

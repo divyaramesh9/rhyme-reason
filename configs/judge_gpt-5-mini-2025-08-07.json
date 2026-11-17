@@ -1,0 +1,21 @@
+{
+  "backend": "openai",
+  "role": "adherence_judge",
+  "model": "gpt-5-mini-2025-08-07",
+  "max_output_tokens": 600,
+  "response_format": {"type": "json_object"},
+  "pricing": {
+    "input_usd_per_1m": 0.25,
+    "output_usd_per_1m": 2.00,
+    "currency": "USD",
+    "source": "https://developers.openai.com/api/docs/pricing",
+    "verified_utc": "2026-11-16",
+    "note": "gpt-5-mini list price as of 2026-11-16. Cheaper dated judges exist (gpt-5-nano, gpt-4o-mini) but are weaker or share the GPT-4o family with one generator."
+  },
+  "status": {
+    "access_verified": false,
+    "verify_with": "python3 scripts/check_openai_access.py --model-config configs/judge_gpt-5-mini-2025-08-07.json",
+    "note": "Chat-completions support for this snapshot must be confirmed on the user's account before the first judging run (the check is free and generates nothing). gpt-5-mini is a reasoning-family model: temperature is intentionally NOT sent (the API rejects non-default sampling params on this family). Deliberately a DIFFERENT family from all three generators (Qwen, Llama, GPT-4o) to limit same-family judge bias; gpt-4o-mini was rejected for sharing the GPT-4o family with one generating model."
+  },
+  "notes": "Judge for the automated adherence evaluator. Pinned dated snapshot, separate from the three generating models. The judge receives device rule + rubric + reasoning text (+ optional mechanical evidence) and returns a structured JSON verdict. Do not raise max_output_tokens casually: judge output is a compact JSON object; a 'length' finish_reason is treated as judge_output_truncated, not a verdict."
+}

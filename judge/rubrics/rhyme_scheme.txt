@@ -1,0 +1,13 @@
+RHYME SCHEME operational rubric (v1)
+
+Rule: the last words of lines 1&2 rhyme, lines 3&4 rhyme, and so on (AABB). Rhyming words must be part of the reasoning sentences -- appended disconnected words do not count. If the line count is odd, the final line is exempt. (User decisions: slant rhymes MAY count; repeated end words are allowed when the repetition is genuine reasoning, not just for the rhyme.)
+
+- Applicable units: consecutive pairs of non-blank reasoning lines. Whitespace-only lines are skipped before pairing.
+- End word: the last word of each line, ignoring trailing punctuation.
+- Repeated end words within a pair: ALLOWED in principle (user decision). Judge whether the repetition is a genuine reasoning step or repeated just to satisfy the rhyme (e.g. the second line re-says the first with no new content): the latter fails.
+- Rhyme test: the words rhyme if their sounds match from the last stressed vowel onward (e.g. "power"/"cower" rhyme). SLANT RHYMES MAY COUNT (user decision): judge near-rhymes (e.g. "pages"/"gauges") on whether they read as a reasonable line-ending rhyme; list borderline calls in uncertainties.
+- Proper nouns, numbers, or words whose pronunciation is genuinely ambiguous: "uncertain", listed in uncertainties.
+- "Part of the reasoning sentences": flag pairs where a rhyme word appears bolted on and contributes nothing to the step (e.g. a trailing random word after the sentence already ended). That violates the rule when clear.
+- Odd trailing line: exempt, does not affect the verdict.
+- A response with fewer than 2 reasoning lines never forms a complete pair: the AABB rule was not demonstrated, so it cannot "pass" -- fail or uncertain depending on how far it is from the requested form.
+- Whole-response verdict: pass iff every complete pair rhymes (slant acceptable) with words integrated into the sentence.

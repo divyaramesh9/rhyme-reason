@@ -39,7 +39,8 @@ import re
 import sys
 from pathlib import Path
 
-import export_responses as ex
+import common
+import prompt_lib
 import response_parsing as rp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -49,12 +50,7 @@ def load_records(run_dir: Path) -> list[dict]:
     src = run_dir / "responses.jsonl"
     if not src.exists():
         raise SystemExit(f"error: {src} not found")
-    out = []
-    with open(src, encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                out.append(json.loads(line))
-    return out
+    return common.read_jsonl(src)
 
 
 def numbered_view(text: str) -> str:
@@ -105,11 +101,11 @@ def export_preserves_raw(run_dir: Path, rec: dict, raw: str,
         "repo": compat.get("model_repo"),
         "revision": compat.get("model_revision"),
     }
-    tag = ex.model_tag(model, compat)
+    tag = common.model_tag(model, compat)
     path = (export_root / run_id / rec["dataset"] / rec["condition"]
-            / f"{tag}__{ex.safe_tag(rec['dataset'])}__"
-              f"{ex.safe_tag(rec['condition'])}__"
-              f"{ex.safe_tag(rec['example_id'])}.txt")
+            / f"{tag}__{common.safe_tag(rec['dataset'])}__"
+              f"{common.safe_tag(rec['condition'])}__"
+              f"{common.safe_tag(rec['example_id'])}.txt")
     if not path.exists():
         return f"export file not found: {path}"
     text = path.read_text(encoding="utf-8")
@@ -129,7 +125,7 @@ def export_preserves_raw(run_dir: Path, rec: dict, raw: str,
 def show_record(run_dir: Path, rec: dict, export_root: Path) -> int:
     raw = rp.record_raw_text(rec)
     reasoning = rec.get("reasoning_text")
-    expects = rec.get("condition") != "answer_only"
+    expects = prompt_lib.expects_reasoning(rec["condition"])
     print(f"record: {rec['example_id']} | {rec['dataset']} | "
           f"{rec['condition']} | run {rec.get('run_id')}")
     print(f"reasoning_parse_status: {rec.get('reasoning_parse_status')}")

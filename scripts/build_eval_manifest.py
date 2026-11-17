@@ -34,6 +34,7 @@ import random
 import sys
 from pathlib import Path
 
+import common
 import select_disjoint_pilot as sdp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -55,11 +56,11 @@ def build_eval_manifest(processed_dir: Path, n: int, seed: int,
     problems = []
     for dataset in DATASET_ORDER:
         spec = POOLS[dataset]
-        test_records = sdp.load_jsonl(
+        test_records = common.read_jsonl(
             processed_dir / f"{dataset}_{spec['eval_split']}.inputs.jsonl")
         dev_keys = {
             sdp.content_key(r)
-            for r in sdp.load_jsonl(
+            for r in common.read_jsonl(
                 processed_dir / f"{dataset}_{spec['dev_split']}.inputs.jsonl")
         }
         eligible, excluded = [], []

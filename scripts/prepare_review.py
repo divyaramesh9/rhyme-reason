@@ -29,9 +29,9 @@ import json
 import sys
 from pathlib import Path
 
+import common
 import export_responses as ex
 import inspect_response as insp
-import prompt_lib
 import response_parsing as rp
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +49,7 @@ def response_id(run_id: str, model: dict, compat: dict,
                 rec: dict) -> str:
     return "::".join([
         run_id,
-        ex.model_tag(model, compat),
+        common.model_tag(model, compat),
         rec["dataset"],
         rec["condition"],
         rec["example_id"],
@@ -142,43 +142,39 @@ def main() -> int:
             "quantization": env_model.get("quantization"),
         }
         questions = ex.load_questions(run_dir, args.processed_dir)
-        with open(src, encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                model = rec.get("model") or fallback_model
-                rid = response_id(run_id, model, compat, rec)
-                fname = (
-                    f"{ex.model_tag(model, compat)}__"
-                    f"{ex.safe_tag(rec['dataset'])}__"
-                    f"{ex.safe_tag(rec['condition'])}__"
-                    f"{ex.safe_tag(rec['example_id'])}.review.txt")
-                dest = (args.out_dir / "files" / run_id / rec["dataset"]
-                        / rec["condition"] / fname)
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_text(render_review(
-                    rec, questions.get(rec["example_id"]), model, compat,
-                    run_id, args.prompts_dir), encoding="utf-8")
-                n_files += 1
-                rule_file, rule_sha = rule_text_for(
-                    rec["condition"], args.prompts_dir)
-                rule = (args.prompts_dir / f"{rec['condition']}.txt"
-                        ).read_text(encoding="utf-8")
-                rows.append({
-                    "response_id": rid,
-                    "run_id": run_id,
-                    "model": f"{model.get('repo')}@{model.get('revision')}",
-                    "dataset": rec["dataset"],
-                    "example_id": rec["example_id"],
-                    "condition": rec["condition"],
-                    "device_rule_file": rule_file,
-                    "device_rule_sha256": rule_sha,
-                    "device_rule_text": rule,
-                    "response_file": str(dest),
-                    "adherence_label": "",
-                    "notes": "",
-                })
+        for rec in common.read_jsonl(src):
+            model = rec.get("model") or fallback_model
+            rid = response_id(run_id, model, compat, rec)
+            fname = (
+                f"{common.model_tag(model, compat)}__"
+                f"{common.safe_tag(rec['dataset'])}__"
+                f"{common.safe_tag(rec['condition'])}__"
+                f"{common.safe_tag(rec['example_id'])}.review.txt")
+            dest = (args.out_dir / "files" / run_id / rec["dataset"]
+                    / rec["condition"] / fname)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_text(render_review(
+                rec, questions.get(rec["example_id"]), model, compat,
+                run_id, args.prompts_dir), encoding="utf-8")
+            n_files += 1
+            rule_file, rule_sha = rule_text_for(
+                rec["condition"], args.prompts_dir)
+            rule = (args.prompts_dir / f"{rec['condition']}.txt"
+                    ).read_text(encoding="utf-8")
+            rows.append({
+                "response_id": rid,
+                "run_id": run_id,
+                "model": f"{model.get('repo')}@{model.get('revision')}",
+                "dataset": rec["dataset"],
+                "example_id": rec["example_id"],
+                "condition": rec["condition"],
+                "device_rule_file": rule_file,
+                "device_rule_sha256": rule_sha,
+                "device_rule_text": rule,
+                "response_file": str(dest),
+                "adherence_label": "",
+                "notes": "",
+            })
 
     with open(csv_path, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=CSV_FIELDS)

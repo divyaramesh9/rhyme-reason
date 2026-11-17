@@ -4,12 +4,14 @@
     "screening": "preliminary",
     "controls": "preliminary",
     "evaluation": "evaluation",
-    "development": "development"
+    "development": "development",
+    "judging": "judging"
   },
   "bucket_caps_usd": {
-    "preliminary": 5.0
+    "preliminary": 5.0,
+    "judging": 4.0
   },
   "total_cap_usd": 20.0,
   "buffer_usd_outside_caps": 5.0,
-  "notes": "Editable spending caps for OpenAI generation in this project (user has ~$25 credit total). total_cap_usd covers ALL tracked OpenAI spending across every stage. bucket_caps_usd additionally limits named buckets; the 'preliminary' bucket (screening + controls stages) is capped at $5. The evaluation stage has no sub-cap of its own -- it is bounded only by the $20 total, which leaves ~$5 unspent as a buffer outside planned spending. Caps are limits, not targets -- they are never raised automatically. The ledger tracks only this pipeline's requests, not the account's real balance or spending made elsewhere."
+  "notes": "Editable spending caps for OpenAI calls in this project (user has ~$25 credit total). total_cap_usd covers ALL tracked OpenAI spending across every stage, INCLUDING LLM judging -- generation and judging share the $20 total. bucket_caps_usd additionally limits named buckets; the 'preliminary' bucket (screening + controls stages) is capped at $5 and the 'judging' bucket (adherence-evaluator LLM calls: validation + pilot) at $4. The evaluation stage has no sub-cap -- it is bounded only by the $20 total, which leaves ~$5 unspent as a buffer outside planned spending. Caps are limits, not targets -- they are never raised automatically. The ledger tracks only this pipeline's requests, not the account's real balance or spending made elsewhere. 2026-11-16: 'judging' bucket added for the adherence evaluator; ledger replay now joins commits to their reservations so committed spend lands in the right bucket (previously bucket caps counted only open reservations)."
 }

@@ -30,6 +30,7 @@ import sys
 from pathlib import Path
 
 import backends
+import common
 import prompt_lib
 import run_generation as rg
 
@@ -110,24 +111,20 @@ def main() -> int:
     }
 
     n_ok = n_no = 0
-    with open(resp_path, encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            r = json.loads(line)
-            problems = []
-            if r["condition"] not in args.conditions:
-                problems.append("condition not in planned set")
-            if r["example_id"] not in selected_ids:
-                problems.append("example_id not in planned manifest")
-            problems += compare(stored_compat, cur)
-            tag = f"{r['example_id']}/{r['condition']}"
-            if problems:
-                n_no += 1
-                print(f"INELIGIBLE {tag}: {'; '.join(problems)}")
-            else:
-                n_ok += 1
-                print(f"ELIGIBLE   {tag}")
+    for r in common.read_jsonl(resp_path):
+        problems = []
+        if r["condition"] not in args.conditions:
+            problems.append("condition not in planned set")
+        if r["example_id"] not in selected_ids:
+            problems.append("example_id not in planned manifest")
+        problems += compare(stored_compat, cur)
+        tag = f"{r['example_id']}/{r['condition']}"
+        if problems:
+            n_no += 1
+            print(f"INELIGIBLE {tag}: {'; '.join(problems)}")
+        else:
+            n_ok += 1
+            print(f"ELIGIBLE   {tag}")
     print(f"{n_ok} eligible, {n_no} ineligible under the planned config")
     return 0
 

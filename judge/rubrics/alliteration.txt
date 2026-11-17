@@ -1,0 +1,9 @@
+ALLITERATION operational rubric (v1)
+
+Rule: each reasoning line has at least three words that start with the same consonant letter.
+
+- Applicable units: every non-blank reasoning line.
+- Words: whitespace-separated tokens containing at least one letter. Function words count (the rule does not restrict word type). Numbers do not start with a consonant letter.
+- Letter vs sound: the frozen rule says "consonant LETTER". The mechanical check enforces the letter rule. Use phonetic judgment only as supporting evidence: if words share the initial letter but obviously start with different consonant SOUNDS (e.g. "knight" vs "kite" is fine; "cat" vs "cent" share 'c' but differ in sound), report it under uncertainties rather than overriding the letter rule -- but if a response relies entirely on such mismatches, uncertain is appropriate.
+- 'y' counts as a consonant letter. Case-insensitive.
+- Whole-response verdict: pass iff every applicable line has >=3 words sharing one initial consonant letter.

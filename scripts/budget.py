@@ -37,8 +37,9 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
+
+import common
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BUDGET_CONFIG = REPO_ROOT / "configs" / "budget.json"
@@ -46,10 +47,6 @@ DEFAULT_BUDGET_CONFIG = REPO_ROOT / "configs" / "budget.json"
 
 class BudgetExceeded(Exception):
     """Raised when a reservation would cross a configured cap."""
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def load_budget_config(path: Path = DEFAULT_BUDGET_CONFIG) -> dict:
@@ -100,27 +97,23 @@ class BudgetLedger:
     # -- entries -------------------------------------------------------
 
     def entries(self) -> list[dict]:
-        if not self.path.exists():
-            return []
-        out = []
-        with open(self.path, encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    out.append(json.loads(line))
-        return out
+        return common.read_jsonl(self.path)
 
     def _append(self, entry: dict) -> dict:
-        entry["recorded_at"] = utc_now()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            f.flush()
+        entry["recorded_at"] = common.utc_now()
+        common.append_jsonl(self.path, entry)
         return entry
 
     # -- accounting ----------------------------------------------------
 
     def state(self) -> dict:
-        """Replay the ledger: open reservations, committed spend, etc."""
+        """Replay the ledger: open reservations, committed spend, etc.
+
+        Commit/void/unresolved entries inherit bucket/stage/run_id from
+        their reservation so bucket caps see committed spend (older
+        commits without a bucket join by reservation_id).
+        """
+        reserves: dict[str, dict] = {}
         open_res: dict[str, dict] = {}
         committed: list[dict] = []
         unresolved_ids: set[str] = set()
@@ -128,8 +121,13 @@ class BudgetLedger:
             t = e["type"]
             rid = e.get("reservation_id")
             if t == "reserve":
+                reserves[rid] = e
                 open_res[rid] = e
             elif t == "commit":
+                src = reserves.get(rid, {})
+                e = {**{k: src.get(k) for k in
+                        ("bucket", "stage", "run_id", "model")
+                        if e.get(k) is None}, **e}
                 committed.append(e)
                 open_res.pop(rid, None)
                 unresolved_ids.discard(rid)

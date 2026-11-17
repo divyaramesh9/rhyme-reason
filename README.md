@@ -18,6 +18,7 @@ manually, and accuracy is compared on held-out questions.
 | `docs/conditions.md` | device rules, grouping requirements, known overlaps |
 | `docs/two_stage_design.md` | full screening → review → freeze → evaluation methodology |
 | `docs/blank_line_audit.md` | whitespace-preservation audit of the response path |
+| `docs/adherence_rubric.md` | operational rubric for automated adherence evaluation (5 frozen devices) |
 
 ## Environments
 
@@ -133,6 +134,34 @@ python3 scripts/compare_accuracy.py --run-dirs <eval runs...>
 OpenAI spending is ledger-guarded (`outputs/openai_ledger.jsonl`):
 $5 preliminary cap, $20 total cap, conservative reservation before each
 request. Inspect with `python3 scripts/budget.py --report`.
+
+## Development pilot + automated adherence
+
+After the five-device freeze, a matched **development pilot**
+(`configs/dev_pilot.json`, manifest `data/manifests/dev_pilot.json`:
+8 questions/dataset = 16 questions × 8 conditions × 3 models = **384
+responses**, 240 of them poetic) supports a modular adherence evaluator
+(`scripts/adherence.py`, versioned): deterministic checks for
+anaphora/epistrophe/alliteration, phonetic-evidence checks for rhyme
+(optional CMUdict lexicon — never auto-downloaded), and an LLM judge
+(`scripts/judge_client.py` + `judge/` templates + `configs/judge_*.json`)
+for what code cannot resolve. Adherence is evaluated independently of
+answer correctness; judge inputs never contain model identity, gold
+answers, correctness, or human labels. Rubric + open questions:
+`docs/adherence_rubric.md`.
+
+```bash
+python3 scripts/build_dev_pilot.py                       # build manifest (deterministic, test-disjoint)
+python3 scripts/build_dev_pilot.py --check               # re-verify counts + frozen-selection match
+python3 scripts/eval_adherence.py run --run-dirs <runs...>            # deterministic evals (offline)
+python3 scripts/eval_adherence.py status --run-dirs <runs...>
+python3 scripts/eval_adherence.py judge-preview --run-dirs <runs...>  # judge inputs + cost, nothing sent
+python3 scripts/eval_adherence.py judge-run --run-dirs <runs...>      # PAID judging (you execute)
+python3 scripts/validate_evaluator.py --csv reviews/screening/review.csv --run-dirs <runs...>
+python3 scripts/audit_pack.py build --run-dirs <pilot runs...> --out reviews/pilot_audit
+python3 scripts/audit_pack.py import --pack reviews/pilot_audit --csv <your labels>
+python3 scripts/pilot_report.py --run-dirs <pilot runs...> --out reports/pilot_report.md
+```
 
 ## Layout
 

@@ -1,0 +1,34 @@
+{
+  "policy_version": 1,
+  "description": "Routing policy: which responses get deterministic-only evaluation and which unresolved cases are sent to the LLM judge. Versioned; every adherence_evals.jsonl record stores the sha256 of this file. Changing it creates a new evaluation version -- cached records are never overwritten.",
+  "devices": {
+    "anaphora": {
+      "mode": "deterministic",
+      "reason": "Supplied fixed phrase at line starts -- a literal check an LLM cannot improve."
+    },
+    "epistrophe": {
+      "mode": "deterministic",
+      "reason": "Supplied fixed phrase at line ends -- a literal check an LLM cannot improve."
+    },
+    "alliteration": {
+      "mode": "deterministic",
+      "judge_review": "on_letter_sound_conflict",
+      "reason": "Letter rule is primary (user decision: sound is relevant but letter is easier to evaluate): >=3 words sharing an initial consonant letter, decided by code. Phonetic evidence is attached when a lexicon exists; judge review is requested when every letter-match survives but the sounds plainly conflict across the response."
+    },
+    "rhyme_scheme": {
+      "mode": "deterministic_then_judge_unresolved",
+      "reason": "Only clearly-confirmed rhyme tails resolve deterministically (pass). Everything else -- no strict rhyme tail (slant may still count), identical end words (genuine vs repetition-for-the-rhyme), OOV, missing lexicon, 'part of the reasoning sentences' -- is unknown -> judge. User decisions recorded in docs/adherence_rubric.md."
+    },
+    "meter": {
+      "mode": "judge_always",
+      "reason": "Stress patterns in context cannot be settled mechanically. Code attaches syllable-range evidence and may fail lines that provably cannot reach 10 syllables; all other cases go to the judge."
+    }
+  },
+  "judge_never_receives": [
+    "generating-model identity",
+    "gold answers or reference solutions",
+    "answer-correctness results",
+    "human adherence labels"
+  ],
+  "question_context": "Not sent to the judge for any of the five devices -- no frozen rule requires question semantics. (Documented in docs/adherence_rubric.md; flip only by editing this file and bumping policy_version.)"
+}

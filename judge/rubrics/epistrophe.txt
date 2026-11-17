@@ -1,0 +1,10 @@
+EPISTROPHE operational rubric (v1)
+
+Rule: every reasoning line ends with the exact phrase "as we see".
+
+- Applicable units: every non-blank line inside the reasoning text. Whitespace-only lines are skipped. Lines that look like headings or labels still count as reasoning lines.
+- Case: the match is case-sensitive. "As We See" does not count.
+- Boundary: the phrase must begin on a word boundary -- "...ideas we see" does NOT count because "as" is part of "ideas".
+- Punctuation/whitespace: trailing whitespace is ignored. The phrase must be the last WORDS on the line (user decision): any reasonable punctuation may follow it -- "as we see." AND "as we see," both count, as in normal verse; so do ";", ":", "!", "?", dashes, and closing quotes. Words, digits, or stray symbols after the phrase (e.g. "as we see now", "as we see@") FAIL. Note punctuation in evidence.
+- Empty reasoning: no pass. Zero applicable lines = not_evaluable.
+- Whole-response verdict: pass iff every applicable line complies.

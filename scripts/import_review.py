@@ -24,7 +24,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import export_responses as ex
+import common
 import prepare_review as pr
 import study_defs
 
@@ -47,19 +47,15 @@ def known_response_ids(outputs_root: Path) -> dict[str, dict]:
             "repo": compat.get("model_repo"),
             "revision": compat.get("model_revision"),
         }
-        with open(resp_path, encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                model = rec.get("model") or fallback_model
-                rid = pr.response_id(run_id, model, compat, rec)
-                known[rid] = {
-                    "run_id": run_id,
-                    "dataset": rec["dataset"],
-                    "condition": rec["condition"],
-                    "model": f"{model.get('repo')}@{model.get('revision')}",
-                }
+        for rec in common.read_jsonl(resp_path):
+            model = rec.get("model") or fallback_model
+            rid = pr.response_id(run_id, model, compat, rec)
+            known[rid] = {
+                "run_id": run_id,
+                "dataset": rec["dataset"],
+                "condition": rec["condition"],
+                "model": f"{model.get('repo')}@{model.get('revision')}",
+            }
     return known
 
 

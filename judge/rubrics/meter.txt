@@ -1,0 +1,10 @@
+METER operational rubric (v1)
+
+Rule: each reasoning line follows an iambic pentameter pattern -- ten syllables alternating unstressed-stressed (da-DUM x5). The frozen prompt literally says "a iambic pentameter pattern"; interpret it as iambic pentameter.
+
+- Applicable units: every non-blank reasoning line.
+- Evaluate the stress pattern, not just syllable count. A 10-syllable line without the unstressed-stressed alternation does not satisfy the rule.
+- Numbers, symbols, abbreviations: pronounce them the most natural way ("12" = "twelve", 2 syllables) and say so under uncertainties.
+- Lexical stress in connected speech is ambiguous. When a plausible iambic reading exists for a line, pass that line; when the natural reading clearly breaks the pattern (e.g. a long prose line), fail it; when you cannot decide, mark the line uncertain.
+- Whole-response verdict: pass iff every applicable line can carry an iambic pentameter reading; fail if any line clearly cannot; uncertain when ambiguity dominates.
+- This device was retained in the frozen set with the documented caveat that stress judgments are the least mechanical of the five -- prefer "uncertain" over a confident guess.
