@@ -63,8 +63,6 @@ def load_model_config(path: Path) -> dict:
     import json
     cfg = json.loads(Path(path).read_text(encoding="utf-8"))
     cfg.setdefault("backend", "mlx_local")
-    if cfg["backend"] == "openai":
-        cfg.setdefault("temperature", 0.0)
     return cfg
 
 

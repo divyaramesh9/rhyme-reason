@@ -232,13 +232,19 @@ def _judge_plan(args):
     """Yield (run_dir, response_id, rec, det_record, meta) needing a
     judge call under the routing policy."""
     for run_dir in args.run_dirs:
-        evals = {e["response_id"]: e for e in load_evals(run_dir)
-                 if e["source"] in ("heuristic", "llm_judge")}
-        judged = {e["response_id"] for e in evals.values()
-                  if e["source"] == "llm_judge"}
+        heur = {}
+        judged = set()
+        for e in load_evals(run_dir):
+            if e["source"] == "heuristic":
+                heur[e["response_id"]] = e
+            elif e["source"] == "llm_judge" and e.get(
+                    "processing_status") != "judge_request_error":
+                # Definitive (unbilled) request errors are retried;
+                # every other llm_judge record counts as judged.
+                judged.add(e["response_id"])
         for rid, rec, meta in iter_evaluatable(run_dir, args.conditions):
-            det = evals.get(rid)
-            if det is None or det["source"] != "heuristic":
+            det = heur.get(rid)
+            if det is None:
                 continue
             if rid in judged:
                 continue
