@@ -2,7 +2,7 @@
   "backend": "openai",
   "role": "adherence_judge",
   "model": "gpt-5-mini-2025-08-07",
-  "max_output_tokens": 600,
+  "max_output_tokens": 16384,
   "response_format": {"type": "json_object"},
   "pricing": {
     "input_usd_per_1m": 0.25,

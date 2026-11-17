@@ -238,9 +238,14 @@ def _judge_plan(args):
             if e["source"] == "heuristic":
                 heur[e["response_id"]] = e
             elif e["source"] == "llm_judge" and e.get(
-                    "processing_status") != "judge_request_error":
-                # Definitive (unbilled) request errors are retried;
-                # every other llm_judge record counts as judged.
+                    "processing_status") not in (
+                        "judge_request_error", "judge_output_truncated",
+                        "judge_skipped_too_long"):
+                # Processing failures that produced no verdict are
+                # retried; every other llm_judge record counts as
+                # judged. judge_unresolved stays blocked (may have
+                # been billed -- review manually). A skipped_too_long
+                # only clears when --max-input-tokens-est is raised.
                 judged.add(e["response_id"])
         for rid, rec, meta in iter_evaluatable(run_dir, args.conditions):
             det = heur.get(rid)

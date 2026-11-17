@@ -72,10 +72,8 @@ def matched_delta(per_response: list[dict], dataset: str,
                for r in per_response if r["dataset"] == dataset}
     ids = ({e for (e, c) in correct if c == cond}
            & {e for (e, c) in correct if c == ctrl})
-    n_cond = sum(1 for (e, c) in correct
-               if c == cond and e in ids)
-    n_ctrl = sum(1 for (e, c) in correct
-               if c == ctrl and e in ids)
+    n_cond = sum(1 for e in ids if correct.get((e, cond)))
+    n_ctrl = sum(1 for e in ids if correct.get((e, ctrl)))
     total_cond = sum(1 for (e, c) in correct if c == cond)
     total_ctrl = sum(1 for (e, c) in correct if c == ctrl)
     acc_c = n_cond / len(ids) if ids else None
