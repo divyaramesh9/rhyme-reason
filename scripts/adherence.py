@@ -450,7 +450,7 @@ def evaluate(rec: dict, lexicon=None,
 
 def eval_key(response_id: str, rec: dict, source: str,
              rubric_sha: str | None, policy_sha: str,
-             judge_model: str | None) -> str:
+             judge_model: str | None, lexicon_fp: str) -> str:
     """Cache/resume key: response identity + content + every version
     that could change the verdict."""
     parts = [
@@ -462,6 +462,7 @@ def eval_key(response_id: str, rec: dict, source: str,
         EVALUATOR_VERSION,
         policy_sha,
         judge_model or "no-judge",
+        lexicon_fp,
         source,
     ]
     return common.sha256_text("|".join(parts))

@@ -64,13 +64,44 @@ def load_lexicon(path: Path | None = None) -> dict | None:
     if DEFAULT_LEXICON_PATH.exists():
         return parse_cmudict(
             DEFAULT_LEXICON_PATH.read_text(encoding="utf-8"))
+    # ``pronouncing`` exposes the dict via pkg_resources, which no
+    # longer exists on Python >=3.12 venvs without setuptools. Read the
+    # bundled data files directly through find_spec so no third-party
+    # package code is executed.
     try:
         import pronouncing  # type: ignore
+        return parse_cmudict(pronouncing.cmudict.dict().strip())
     except ImportError:
-        return None
-    # Rebuild the same dict shape from the pronouncing package's own
-    # bundled cmudict text.
-    return parse_cmudict(pronouncing.cmudict.dict().strip())
+        pass
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("cmudict")
+    except ImportError:
+        spec = None
+    if spec and spec.submodule_search_locations:
+        pkg_dir = Path(spec.submodule_search_locations[0])
+        cand = pkg_dir / "data" / "cmudict.dict"
+        if cand.exists():
+            return parse_cmudict(cand.read_text(encoding="utf-8"))
+    return None
+
+
+def lexicon_fingerprint(lexicon) -> str:
+    """Stable identity for the loaded lexicon, included in eval cache
+    keys: a different word set or pronunciation list must not reuse
+    verdicts computed under another lexicon."""
+    if lexicon is None:
+        return "lex:none"
+    import hashlib
+    h = hashlib.sha256()
+    for w in sorted(lexicon):
+        h.update(w.encode("utf-8"))
+        h.update(b"\0")
+        for pron in lexicon[w]:
+            h.update(" ".join(pron).encode("utf-8"))
+            h.update(b"\x01")
+        h.update(b"\x02")
+    return "lex:cmudict-" + h.hexdigest()[:16]
 
 
 def lexicon_status(lexicon) -> str:

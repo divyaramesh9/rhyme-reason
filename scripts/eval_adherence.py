@@ -145,6 +145,7 @@ def cmd_run(args) -> int:
     policy = load_policy()
     psha = policy_sha()
     lexicon = ph.load_lexicon(args.lexicon)
+    lex_fp = ph.lexicon_fingerprint(lexicon)
     print(f"lexicon: {ph.lexicon_status(lexicon)}")
     n_new = n_skip = 0
     for run_dir in args.run_dirs:
@@ -155,7 +156,7 @@ def cmd_run(args) -> int:
                 run_dir, args.conditions):
             key = ad.eval_key(rid, rec, "heuristic",
                               ad.rubric_sha256(rec["condition"]),
-                              psha, None)
+                              psha, None, lex_fp)
             if key in done:
                 n_skip += 1
                 continue
@@ -305,6 +306,7 @@ def cmd_judge_run(args) -> int:
     judge_cfg = backends.load_model_config(args.judge_config)
     psha = policy_sha()
     lexicon = ph.load_lexicon(args.lexicon)
+    lex_fp = ph.lexicon_fingerprint(lexicon)
     print(f"lexicon: {ph.lexicon_status(lexicon)}")
     plan = list(_judge_plan(args))
     if not plan:
@@ -342,7 +344,7 @@ def cmd_judge_run(args) -> int:
         if est_in > args.max_input_tokens_est:
             key = ad.eval_key(rid, rec, "llm_judge",
                               base["rubric_sha256"], psha,
-                              judge_cfg["model"])
+                              judge_cfg["model"], lex_fp)
             if key not in done:
                 common.append_jsonl(evals_path, {
                     **base, "eval_key": key, "verdict": "uncertain",
@@ -385,7 +387,7 @@ def cmd_judge_run(args) -> int:
                                 reason="definitive_provider_error")
             key = ad.eval_key(rid, rec, "llm_judge",
                               base["rubric_sha256"], psha,
-                              judge_cfg["model"])
+                              judge_cfg["model"], lex_fp)
             if key not in done:
                 common.append_jsonl(evals_path, {
                     **base, "eval_key": key,
@@ -418,7 +420,7 @@ def cmd_judge_run(args) -> int:
 
         key = ad.eval_key(rid, rec, "llm_judge",
                           base["rubric_sha256"], psha,
-                          judge_cfg["model"])
+                          judge_cfg["model"], lex_fp)
         common.append_jsonl(evals_path, {
             **base, "eval_key": key, "verdict": verdict,
             "processing_status": status,

@@ -16,3 +16,7 @@ numpy==2.5.4
 # Only imported when an OpenAI model config is actually used -- dry runs
 # and all tests work without it.
 openai==3.50.0
+
+# Optional pronunciation lexicon (bundles cmudict) for phonetic evidence
+# when running eval_adherence.py under this environment.
+pronouncing==0.2.0

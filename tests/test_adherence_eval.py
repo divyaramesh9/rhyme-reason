@@ -286,29 +286,33 @@ def test_meter_evidence_and_provably_short_fail():
 
 def test_eval_key_changes_with_versions(tmp_path, monkeypatch):
     rec = _rec("REASONING:\nWe know a\nFINAL_ANSWER: 1")
-    k0 = ad.eval_key("rid", rec, "heuristic", "rub1", "pol1", None)
+    L = "lex:none"
+    k0 = ad.eval_key("rid", rec, "heuristic", "rub1", "pol1", None, L)
     assert k0 == ad.eval_key("rid", rec, "heuristic", "rub1", "pol1",
-                             None)
+                             None, L)
     # different content
     rec2 = _rec("REASONING:\nWe know b\nFINAL_ANSWER: 1")
     assert ad.eval_key("rid", rec2, "heuristic", "rub1", "pol1",
-                       None) != k0
+                       None, L) != k0
     # rubric change
     assert ad.eval_key("rid", rec, "heuristic", "rub2", "pol1",
-                       None) != k0
+                       None, L) != k0
     # policy change
     assert ad.eval_key("rid", rec, "heuristic", "rub1", "pol2",
-                       None) != k0
+                       None, L) != k0
     # judge model change
     assert ad.eval_key("rid", rec, "llm_judge", "rub1", "pol1",
-                       "m1") != k0
+                       "m1", L) != k0
     # source difference
     assert ad.eval_key("rid", rec, "llm_judge", "rub1", "pol1",
-                       None) != k0
+                       None, L) != k0
+    # lexicon change
+    assert ad.eval_key("rid", rec, "heuristic", "rub1", "pol1",
+                       None, "lex:cmudict-abc") != k0
     # evaluator version change
     monkeypatch.setattr(ad, "EVALUATOR_VERSION", "9.9.9")
     assert ad.eval_key("rid", rec, "heuristic", "rub1", "pol1",
-                       None) != k0
+                       None, L) != k0
 
 
 # ==========================================================================
